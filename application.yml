@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/tibiastats
+    username: tibia
+    password: secret
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: "please-change-me-to-a-very-long-random-secret"
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  graphql:
+    path: /graphql.
+
+server:
+  port: 8080
+
+# Scraping schedules (overrideable)
+tibiastats:
+  scrape:
+    worlds:
+    rate-ms: 60000 # every 1 minute by default
+  highscores:
+    cron: "0 0 7 * * *" # daily 03:00
+  jwt:
+    access-ttl-ms: 900000      # 15 minutes
+    refresh-ttl-ms: 1209600000 # 14 days

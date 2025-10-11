@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: tibia
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: tibiastats
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      - db
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tibiastats
+      SPRING_DATASOURCE_USERNAME: tibia
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY: "please-change-me-to-a-very-long-random-secret"
+      TIBIASTATS_SCRAPE_WORLDS_RATE_MS: "60000"        # changed hyphen -> underscore
+      TIBIASTATS_SCRAPE_HIGHSCORES_CRON: "0 0 7 * * *"
+      SPRING_FLYWAY_URL: jdbc:postgresql://db:5432/tibiastats
+      SPRING_FLYWAY_USER: tibia
+      SPRING_FLYWAY_PASSWORD: secret
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      DOCKER_HOST: unix:///var/run/docker.sock
+    ports:
+      - "8080:8080"
+      - "9003:9003"
+    volumes:
+      - .:/workspace
+      - ~/.m2:/root/.m2
+    command:
+      - mvn
+      - -DskipTests
+      - spring-boot:run
+      - -Dspring-boot.run.profiles=dev
+      - -X
+      - -Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:9003
+
+
+volumes:
+  db_data: {}

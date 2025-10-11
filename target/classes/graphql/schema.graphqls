@@ -1,0 +1,58 @@
+schema {
+    query: Query
+}
+
+enum StatCategory {
+    ACHIEVEMENTS
+    AXE_FIGHTING
+    CHARM_POINTS
+    CLUB_FIGHTING
+    DISTANCE_FIGHTING
+    EXPERIENCE
+    FISHING
+    FIST_FIGHTING
+    GOSHNARS_TAINT
+    LOYALTY_POINTS
+    MAGIC_LEVEL
+    SHIELDING
+    SWORD_FIGHTING
+    DROME_SCORE
+    BOSS_POINTS
+}
+
+type Query {
+    onlineTotal: Int!
+    worldsOnline: [WorldOnline!]!
+    worldOnlineNow(name: String!): WorldOnline
+    worldOnlineHistory(name: String!, from: String, to: String): [OnlinePoint!]!
+    character(name: String!): Character
+    characterStatHistory(name: String!, category: StatCategory!): [StatPoint!]!
+}
+
+type WorldOnline {
+    name: String!
+    playersOnline: Int!
+}
+
+
+type OnlinePoint {
+    timestamp: String!
+    playersOnline: Int!
+}
+
+type StatPoint {
+    date: String!
+    value: Int!
+    rank: Int
+    world: String!
+}
+
+type Character {
+    id: ID!
+    name: String!
+    level: Int
+    vocation: String
+    residence: String
+    lastLogin: String
+    status: String
+}

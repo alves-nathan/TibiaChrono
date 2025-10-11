@@ -1,0 +1,5 @@
+com/nathan/tibiastats/AbstractPostgresTest.class
+com/nathan/tibiastats/auth/AuthIntegrationTest.class
+com/nathan/tibiastats/controller/WorldControllerTest.class
+com/nathan/tibiastats/security/SecurityIntegrationTest.class
+com/nathan/tibiastats/api/OnlineControllerIntegrationTest.class

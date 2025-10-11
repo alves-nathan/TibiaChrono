@@ -1,0 +1,102 @@
+{
+  "info": {
+    "name": "TibiaStats API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "b7d4c0e0-9fd0-4c64-9d69-123456789abc"
+  },
+  "item": [
+    {
+      "name": "Auth / Register",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "url": {"raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path":["auth","register"]},
+        "body": {"mode":"raw","raw": "{
+          \"username\": \"{{username}}\",
+          \"password\": \"{{password}}\",
+          \"roles\": \"USER\"
+        }"}
+      }
+    },
+    {
+      "name": "Auth / Login",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "let json = pm.response.json();",
+            "pm.environment.set('accessToken', json.accessToken);",
+            "pm.environment.set('refreshToken', json.refreshToken);"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "url": {"raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path":["auth","login"]},
+        "body": {"mode":"raw","raw": "{
+          \"username\": \"{{username}}\",
+          \"password\": \"{{password}}\"
+        }"}
+      }
+    },
+    {
+      "name": "Auth / Refresh",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "url": {"raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path":["auth","refresh"]},
+        "body": {"mode":"raw","raw": "{
+          \"refreshToken\": \"{{refreshToken}}\"
+        }"}
+      }
+    },
+    {
+      "name": "Auth / Logout",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}],
+        "url": {"raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path":["auth","logout"]}
+      }
+    },
+    {
+      "name": "Online / Total",
+      "request": {
+        "method": "GET",
+        "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}],
+        "url": {"raw": "{{baseUrl}}/api/online/total", "host": ["{{baseUrl}}"], "path":["api","online","total"]}
+      }
+    },
+    {
+      "name": "Online / Worlds",
+      "request": {
+        "method": "GET",
+        "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}],
+        "url": {"raw": "{{baseUrl}}/api/online/worlds", "host": ["{{baseUrl}}"], "path":["api","online","worlds"]}
+      }
+    },
+    {
+      "name": "Online / World Now (Antica)",
+      "request": {
+        "method": "GET",
+        "header": [{"key":"Authorization","value":"Bearer {{accessToken}}"}],
+        "url": {"raw": "{{baseUrl}}/api/online/worlds/Antica", "host": ["{{baseUrl}}"], "path":["api","online","worlds","Antica"]}
+      }
+    },
+    {
+      "name": "GraphQL / onlineTotal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key":"Content-Type","value":"application/json"},
+          {"key":"Authorization","value":"Bearer {{accessToken}}"}
+        ],
+        "url": {"raw": "{{baseUrl}}/graphql", "host": ["{{baseUrl}}"], "path":["graphql"]},
+        "body": {"mode":"raw","raw": "{
+          \"query\": \"{ onlineTotal }\"
+        }"}
+      }
+    }
+  ]
+}

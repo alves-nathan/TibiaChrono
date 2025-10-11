@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: tibia
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: tibiastats
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tibiastats
+      SPRING_DATASOURCE_USERNAME: tibia
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY: "please-change-me-to-a-very-long-random-secret"
+      TIBIASTATS_SCRAPE_WORLDS_RATE_MS: "60000"
+      TIBIASTATS_SCRAPE_HIGHSCORES_CRON: "0 0 7 * * *"
+    ports:
+      - "8080:8080"
+    command: ["java","-jar","/app/app.jar"]
+
+volumes:
+  db_data: {}

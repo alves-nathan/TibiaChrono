@@ -1,0 +1,16 @@
+package com.nathan.tibiastats.domain.port;
+
+import com.nathan.tibiastats.domain.model.World;
+import com.nathan.tibiastats.domain.model.ScrapeRecord;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
+public interface WorldRepositoryPort {
+    Optional<World> findByName(String name);
+    World save(World w);
+    List<World> findAll();
+    ScrapeRecord saveScrape(ScrapeRecord r);
+    List<ScrapeRecord> findScrapesByWorldAndRange(World w, Instant from, Instant to);
+    Optional<ScrapeRecord> findLatestByWorld(World w);
+}

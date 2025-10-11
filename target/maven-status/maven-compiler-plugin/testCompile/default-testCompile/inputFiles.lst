@@ -1,0 +1,5 @@
+/workspace/src/test/java/com/nathan/tibiastats/api/OnlineControllerIntegrationTest.java
+/workspace/src/test/java/com/nathan/tibiastats/auth/AuthIntegrationTest.java
+/workspace/src/test/java/com/nathan/tibiastats/controller/WorldControllerTest.java
+/workspace/src/test/java/com/nathan/tibiastats/security/SecurityIntegrationTest.java
+/workspace/src/test/java/com/nathan/tibiastats/AbstractPostgresTest.java

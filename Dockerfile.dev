@@ -1,0 +1,6 @@
+FROM maven:3.9.9-eclipse-temurin-21
+WORKDIR /workspace
+# cache deps
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+CMD ["mvn","spring-boot:run","-Dspring-boot.run.profiles=dev"]
