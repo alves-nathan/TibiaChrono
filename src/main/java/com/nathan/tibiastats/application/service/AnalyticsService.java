@@ -2,8 +2,7 @@ package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.port.AnalyticsQueryPort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
-import com.nathan.tibiastats.domain.model.World;
-import com.nathan.tibiastats.domain.model.ScrapeRecord;
+import com.nathan.tibiastats.domain.model.Scrape;
 import org.springframework.stereotype.Service;
 import java.time.Instant; import java.util.*; import java.util.stream.*;
 
@@ -18,7 +17,7 @@ public class AnalyticsService implements AnalyticsQueryPort {
                 .map(worlds::findLatestByWorld)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .mapToInt(ScrapeRecord::getPlayersOnline)
+                .mapToInt(Scrape::getPlayersOnline)
                 .sum();
     }
 

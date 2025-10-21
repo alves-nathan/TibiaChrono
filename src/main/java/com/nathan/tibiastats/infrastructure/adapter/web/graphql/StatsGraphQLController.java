@@ -1,7 +1,7 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.graphql;
 
 import com.nathan.tibiastats.application.service.AnalyticsService;
-import com.nathan.tibiastats.domain.model.ScrapeRecord;
+import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
@@ -40,7 +40,7 @@ public class StatsGraphQLController {
                     Map<String, Object> m = new HashMap<>();
                     m.put("name", w.getName());
                     int online = worlds.findLatestByWorld(w)
-                            .map(ScrapeRecord::getPlayersOnline)
+                            .map(Scrape::getPlayersOnline)
                             .orElse(0);
                     m.put("playersOnline", online);
                     return m;
@@ -54,7 +54,7 @@ public class StatsGraphQLController {
         var latest = worlds.findLatestByWorld(w);
         Map<String, Object> m = new HashMap<>();
         m.put("name", name);
-        m.put("playersOnline", latest.map(ScrapeRecord::getPlayersOnline).orElse(0));
+        m.put("playersOnline", latest.map(Scrape::getPlayersOnline).orElse(0));
         return m;
     }
 
@@ -82,7 +82,7 @@ public class StatsGraphQLController {
 
     @QueryMapping
     public Map<String, Object> character(@Argument String name) {
-        var c = chars.findByActiveName(name).orElseThrow();
+        var c = chars.findByAnyName(name).orElseThrow();
         Map<String, Object> m = new HashMap<>();
         m.put("id", c.getId());
         m.put("name", name);
@@ -95,7 +95,7 @@ public class StatsGraphQLController {
     public List<Map<String, Object>> characterStatHistory(
             @Argument String name,
             @Argument StatCategory category) {
-        var c = chars.findByActiveName(name).orElseThrow();
+        var c = chars.findByAnyName(name).orElseThrow();
         return chars.findStatsBy(c, category).stream()
                 .map(r -> {
                     Map<String, Object> m = new HashMap<>();

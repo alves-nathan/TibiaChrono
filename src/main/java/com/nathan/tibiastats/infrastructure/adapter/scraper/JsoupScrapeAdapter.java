@@ -3,6 +3,9 @@ package com.nathan.tibiastats.infrastructure.adapter.scraper;
 import com.nathan.tibiastats.domain.port.ScrapePort;
 import org.jsoup.Jsoup; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*; import java.io.IOException;
 
 @Component
@@ -49,5 +52,30 @@ public class JsoupScrapeAdapter implements ScrapePort {
         } catch (IOException e){ throw new RuntimeException(e); }
     }
 
-    private int parseIntSafe(String s){ try { return Integer.parseInt(s.replaceAll("[^0-9]","")); } catch(Exception e){ return 0; } }
+    @Override
+    public boolean isFormerName(String oldName, String newName) {
+        try {
+            String url = "https://www.tibia.com/community/?subtopic=characters&name=" + URLEncoder.encode(oldName, StandardCharsets.UTF_8);
+            Document doc = Jsoup.connect(url).get();
+            // adjust selector to where “Former Names” appear on character page
+            Elements links = doc.select("div.FormerNames a");  // example
+            for (Element a : links) {
+                if (newName.equalsIgnoreCase(a.text().trim())) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (IOException e) {
+            // log error and treat as not former name
+            return false;
+        }
+    }
+
+    private int parseIntSafe(String s){
+        try {
+            return Integer.parseInt(s.replaceAll("[^0-9]",""));
+        } catch(Exception e){
+            return 0;
+        }
+    }
 }

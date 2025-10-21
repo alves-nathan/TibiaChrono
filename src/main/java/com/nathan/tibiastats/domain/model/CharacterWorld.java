@@ -4,18 +4,24 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 
-@Entity @Table(name="characternames")
-public class CharacterName {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Entity
+@Table(name = "character_worlds")
+public class CharacterWorld {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "character_id")
     private Character character;
-    @Column(nullable=false, unique=true)
-    private String name;
-    @Column(name = "active")
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "world_id")
+    private World world;
+
     private Boolean active;
-    @Column(name = "timestamp")
+
+    @Column(nullable = false)
     private Instant timestamp;
 
     public Long getId() {
@@ -26,12 +32,20 @@ public class CharacterName {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public Character getCharacter() {
+        return character;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setCharacter(Character character) {
+        this.character = character;
+    }
+
+    public World getWorld() {
+        return world;
+    }
+
+    public void setWorld(World world) {
+        this.world = world;
     }
 
     public Boolean getActive() {
@@ -50,18 +64,9 @@ public class CharacterName {
         this.timestamp = timestamp;
     }
 
-    public Character getCharacter() {
-        return character;
-    }
-
-    public void setCharacter(Character character) {
-        this.character = character;
-    }
-
-    public static CharacterName createActive(String name, Character c) {
-        CharacterName cn = new CharacterName();
-        cn.setName(name);
-        cn.setCharacter(c);
+    public static CharacterWorld createActive(World world) {
+        CharacterWorld cn = new CharacterWorld();
+        cn.setWorld(world);
         cn.setActive(true);
         cn.setTimestamp(null);
         return cn;

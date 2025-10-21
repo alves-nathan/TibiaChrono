@@ -1,7 +1,7 @@
 package com.nathan.tibiastats.api;
 
 import com.nathan.tibiastats.AbstractPostgresTest;
-import com.nathan.tibiastats.domain.model.ScrapeRecord;
+import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.World;
 import com.nathan.tibiastats.infrastructure.persistence.SpringWorldRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +38,7 @@ class OnlineControllerIntegrationTest extends AbstractPostgresTest {
 
         // seed world + scrape
         var w = worlds.save(new World("Antica","Open PvP","Europe"));
-        worlds.saveScrape(new ScrapeRecord(w, Instant.now(), 123, "[]"));
+        worlds.saveScrape(new Scrape(w, Instant.now(), 123, "[]"));
     }
 
     @Test

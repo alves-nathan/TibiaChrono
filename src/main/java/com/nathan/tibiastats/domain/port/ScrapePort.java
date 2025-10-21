@@ -9,4 +9,6 @@ public interface ScrapePort {
 
     List<WorldSummary> fetchWorldsOverview();
     WorldOnline fetchWorldPage(String worldName);
+
+    boolean isFormerName(String oldName, String newName);
 }

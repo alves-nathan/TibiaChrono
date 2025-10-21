@@ -7,11 +7,11 @@ import java.time.LocalDate;
 @Entity @Table(name="characterStatRecords")
 public class CharacterStatRecord {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @ManyToOne(optional=false)
     @JoinColumn(name="character_id")
-    private CharacterEntity character;
+    private Character character;
 
     @Enumerated(EnumType.STRING)
     private StatCategory category;
@@ -32,19 +32,19 @@ public class CharacterStatRecord {
     @Column(name = "timestamp")
     private Instant timestamp;
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public CharacterEntity getCharacter() {
+    public Character getCharacter() {
         return character;
     }
 
-    public void setCharacter(CharacterEntity character) {
+    public void setCharacter(Character character) {
         this.character = character;
     }
 

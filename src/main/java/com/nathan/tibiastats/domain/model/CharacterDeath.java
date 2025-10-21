@@ -10,29 +10,29 @@ import java.time.Instant;
 public class CharacterDeath {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @ManyToOne(optional=false)
     @JoinColumn(name="character_id")
-    private CharacterEntity character;
+    private Character character;
     @Column(name="death_date")
     private Instant deathDate;
     @Column(name="killed_by")
     private String killedBy; // keeping original column name
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public CharacterEntity getCharacter() {
+    public Character getCharacter() {
         return character;
     }
 
-    public void setCharacter(CharacterEntity character) {
+    public void setCharacter(Character character) {
         this.character = character;
     }
 

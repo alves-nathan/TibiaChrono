@@ -15,7 +15,7 @@ public class CharacterController {
 
     @GetMapping("/{name}")
     public Map<String,Object> getCharacter(@PathVariable String name){
-        var c = repo.findByActiveName(name).orElseThrow();
+        var c = repo.findByAnyName(name).orElseThrow();
         // Minimal fields; extend as you start filling CharacterEntity fields
         return Map.of("id", c.getId(), "name", name, "level", c.getLevel(), "vocationId", c.getVocationId());
     }
@@ -23,7 +23,7 @@ public class CharacterController {
     @GetMapping("/{name}/stats")
     public List<Map<String, Serializable>> getStats(@PathVariable String name,
                                                     @RequestParam StatCategory category) {
-        var c = repo.findByActiveName(name).orElseThrow();
+        var c = repo.findByAnyName(name).orElseThrow();
         return repo.findStatsBy(c, category).stream()
                 .map(r -> {
                     Map<String, Serializable> m = new HashMap<>();

@@ -2,15 +2,18 @@ CREATE TABLE IF NOT EXISTS worlds (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   pvp_type TEXT,
-  location TEXT
+  location TEXT,
+  online_record TEXT,
+  creation_date DATE,
+  transfer_type TEXT,
+  game_world_type TEXT
 );
 
 CREATE TABLE IF NOT EXISTS scrapes (
   id BIGSERIAL PRIMARY KEY,
-  world_id INTEGER NOT NULL REFERENCES worlds (id) ON DELETE CASCADE,
+  world_id INTEGER NOT NULL REFERENCES worlds (id),
   scrape_time TIMESTAMP WITH TIME ZONE NOT NULL,
-  players_online INTEGER NOT NULL,
-  player_list TEXT
+  players_online INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS vocations (
@@ -19,35 +22,64 @@ CREATE TABLE IF NOT EXISTS vocations (
   promotion_name TEXT
 );
 
-CREATE TABLE IF NOT EXISTS character_names (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  active BOOLEAN
-);
-
 CREATE TABLE IF NOT EXISTS characters (
   id BIGSERIAL PRIMARY KEY,
-  name_id INTEGER REFERENCES character_names (id),
   sex TEXT CHECK (sex IN ('male', 'female')),
   vocation_id INTEGER REFERENCES vocations (id),
   level INTEGER,
   achievement_points INTEGER,
   residence TEXT,
   last_login TIMESTAMP WITH TIME ZONE,
-  acc_status TEXT
+  acc_status TEXT,
+  creation_date TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS character_names (
+  id BIGSERIAL PRIMARY KEY,
+  character_id INTEGER REFERENCES characters (id),
+  name TEXT NOT NULL UNIQUE,
+  active BOOLEAN,
+  timestamp TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS scrape_players (
+  id BIGSERIAL PRIMARY KEY,
+  scrape_id INTEGER NOT NULL REFERENCES scrapes (id),
+  character_id INTEGER NOT NULL REFERENCES characters (id)
+);
+
+CREATE TABLE IF NOT EXISTS character_worlds (
+  id BIGSERIAL PRIMARY KEY,
+  character_id INTEGER NOT NULL REFERENCES characters (id),
+  world_id INTEGER NOT NULL REFERENCES worlds (id),
+  active BOOLEAN,
+  timestamp TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS character_deaths (
   id BIGSERIAL PRIMARY KEY,
-  character_id INTEGER NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
+  character_id INTEGER NOT NULL REFERENCES characters (id),
   death_date TIMESTAMP WITH TIME ZONE,
   killed_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS guilds (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  world_id INTEGER NOT NULL REFERENCES worlds (id)
+);
+
+CREATE TABLE IF NOT EXISTS guild_characters (
+  id BIGSERIAL PRIMARY KEY,
+  guild_id INTEGER NOT NULL REFERENCES guilds (id),
+  character_id INTEGER NOT NULL REFERENCES characters (id),
+  timestamp TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 -- Enum stored as TEXT with CHECK constraint
 CREATE TABLE IF NOT EXISTS character_statrecords (
   id BIGSERIAL PRIMARY KEY,
-  character_id INTEGER NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
+  character_id INTEGER NOT NULL REFERENCES characters (id),
   category TEXT NOT NULL CHECK (
     category IN (
       'ACHIEVEMENTS',
@@ -83,9 +115,8 @@ VALUES
   ('paladin', 'royal paladin'),
   ('monk', 'exalted monk');
 
--- Helpful indexes
-CREATE INDEX IF NOT EXISTS idx_scrape_world_time ON scrapes (world_id, scrape_time);
-
-CREATE INDEX IF NOT EXISTS idx_csr_char_cat_date ON character_statrecords (character_id, category, date);
-
-CREATE INDEX IF NOT EXISTS idx_csr_world_cat_date ON character_statrecords (world_id, category, date);
+CREATE INDEX IF NOT EXISTS idx_scrape_world_time ON scrapes(world_id, scrape_time);
+CREATE INDEX IF NOT EXISTS idx_csr_char_cat_date ON character_statrecords(character_id, category, date);
+CREATE INDEX IF NOT EXISTS idx_csr_world_cat_date ON character_statrecords(world_id, category, date);
+CREATE INDEX IF NOT EXISTS idx_sp_scrape ON scrape_players(scrape_id);
+CREATE INDEX IF NOT EXISTS idx_sp_char ON scrape_players(character_id);

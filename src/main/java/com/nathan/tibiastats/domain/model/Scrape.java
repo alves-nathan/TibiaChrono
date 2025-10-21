@@ -3,13 +3,14 @@ package com.nathan.tibiastats.domain.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Entity @Table(name="scrapes")
-public class ScrapeRecord {
+public class Scrape {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
+    private Long id;
     @ManyToOne(optional=false)
     @JoinColumn(name="world_id")
     private World world;
@@ -18,32 +19,29 @@ public class ScrapeRecord {
     @Column(name = "players_online")
     private Integer playersOnline;
 
-    @Lob
-    @Column(name = "player_list", columnDefinition = "TEXT")
-    private String playerlist; // JSON string
+    @OneToMany(mappedBy = "scrape", cascade = CascadeType.ALL)
+    private List<ScrapePlayer> players = new ArrayList<>();
 
-    public ScrapeRecord(){}
+    public Scrape(){}
 
-    public ScrapeRecord(Integer id, World world, Instant scrapetime, Integer playersOnline, String playerlist) {
+    public Scrape(Long id, World world, Instant scrapetime, Integer playersOnline, String playerlist) {
         this.id = id;
         this.world = world;
         this.scrapetime = scrapetime;
         this.playersOnline = playersOnline;
-        this.playerlist = playerlist;
     }
 
-    public ScrapeRecord(World world, Instant scrapetime, Integer playersOnline, String playerlist) {
+    public Scrape(World world, Instant scrapetime, Integer playersOnline, String playerlist) {
         this.world = world;
         this.scrapetime = scrapetime;
         this.playersOnline = playersOnline;
-        this.playerlist = playerlist;
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -71,11 +69,16 @@ public class ScrapeRecord {
         this.playersOnline = playersOnline;
     }
 
-    public String getPlayerlist() {
-        return playerlist;
+    public List<ScrapePlayer> getPlayers() {
+        return players;
     }
 
-    public void setPlayerlist(String playerlist) {
-        this.playerlist = playerlist;
+    public void setPlayers(List<ScrapePlayer> players) {
+        this.players = players;
+    }
+
+    public void addPlayer(ScrapePlayer sp) {
+        players.add(sp);
+        sp.setScrape(this);
     }
 }

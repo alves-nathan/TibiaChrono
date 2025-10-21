@@ -2,7 +2,7 @@ package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
 import com.nathan.tibiastats.application.service.AnalyticsService;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
-import com.nathan.tibiastats.domain.model.ScrapeRecord;
+import com.nathan.tibiastats.domain.model.Scrape;
 import org.springframework.web.bind.annotation.*;
 import java.time.Instant; import java.util.*; import java.util.stream.*;
 
@@ -31,7 +31,7 @@ public class OnlineController {
                     Map<String, Object> m = new HashMap<>();
                     m.put("world", w.getName());
                     int online = worlds.findLatestByWorld(w)
-                            .map(ScrapeRecord::getPlayersOnline)
+                            .map(Scrape::getPlayersOnline)
                             .orElse(0);
                     m.put("playersOnline", online);
                     return m;
@@ -45,7 +45,7 @@ public class OnlineController {
         var latest = worlds.findLatestByWorld(w);
         Map<String, Object> m = new HashMap<>();
         m.put("world", name);
-        m.put("playersOnline", latest.map(ScrapeRecord::getPlayersOnline).orElse(0));
+        m.put("playersOnline", latest.map(Scrape::getPlayersOnline).orElse(0));
         return m;
     }
 

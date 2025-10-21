@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.*;
+import com.nathan.tibiastats.domain.model.Character;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
 import com.nathan.tibiastats.domain.port.HighscorePort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
@@ -27,9 +28,9 @@ public class HighscoreService {
                         hasData = !rows.isEmpty();
                         for (var row : rows){
                             var nameOpt = chars.findActiveName(row.name());
-                            CharacterEntity character = nameOpt.flatMap(n-> chars.findByActiveName(row.name())).orElseGet(() -> {
+                            Character character = nameOpt.flatMap(n-> chars.findByAnyName(row.name())).orElseGet(() -> {
                                 var n = new CharacterName(); n.setName(row.name()); n.setActive(true); n = chars.saveName(n);
-                                var c = new CharacterEntity(); c.setNameId(n.getId()); return chars.saveCharacter(c);
+                                var c = new Character(); c.getNames().add(n); return chars.save(c);
                             });
                             var rec = new CharacterStatRecord();
                             rec.setCharacter(character); rec.setWorld(world); rec.setCategory(category);

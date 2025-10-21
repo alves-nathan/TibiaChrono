@@ -52,7 +52,7 @@ up-dev:
 
 .PHONY: down-dev
 down-dev:
-	docker compose -f $(DEV_COMPOSE) down
+	docker compose -f $(DEV_COMPOSE) down -v
 
 .PHONY: logs-dev
 logs-dev:
