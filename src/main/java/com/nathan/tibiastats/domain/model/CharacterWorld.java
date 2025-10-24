@@ -13,7 +13,7 @@ public class CharacterWorld {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "character_id")
-    private Character character;
+    private CharacterEntity character;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "world_id")
@@ -22,7 +22,8 @@ public class CharacterWorld {
     private Boolean active;
 
     @Column(nullable = false)
-    private Instant timestamp;
+    @JoinColumn(name = "inactive_date")
+    private Instant inactiveDate;
 
     public Long getId() {
         return id;
@@ -32,11 +33,11 @@ public class CharacterWorld {
         this.id = id;
     }
 
-    public Character getCharacter() {
+    public CharacterEntity getCharacter() {
         return character;
     }
 
-    public void setCharacter(Character character) {
+    public void setCharacter(CharacterEntity character) {
         this.character = character;
     }
 
@@ -56,24 +57,24 @@ public class CharacterWorld {
         this.active = active;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public Instant getInactiveDate() {
+        return inactiveDate;
     }
 
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
+    public void setInactiveDate(Instant inactiveDate) {
+        this.inactiveDate = inactiveDate;
     }
 
     public static CharacterWorld createActive(World world) {
         CharacterWorld cn = new CharacterWorld();
         cn.setWorld(world);
         cn.setActive(true);
-        cn.setTimestamp(null);
+        cn.setInactiveDate(null);
         return cn;
     }
 
     public void deactivate(Instant when) {
-        this.active = false;
-        this.timestamp = when;
+        this.setActive(false);
+        this.setInactiveDate(when);
     }
 }

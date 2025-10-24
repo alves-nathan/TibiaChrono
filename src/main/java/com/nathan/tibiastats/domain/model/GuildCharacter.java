@@ -16,9 +16,10 @@ public class GuildCharacter {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "character_id")
-    private Character character;
+    private CharacterEntity character;
 
-    private Instant timestamp;
+    @JoinColumn(name = "created_at")
+    private Instant createdAt;
 
     public Long getId() {
         return id;
@@ -36,19 +37,19 @@ public class GuildCharacter {
         this.guild = guild;
     }
 
-    public Character getCharacter() {
+    public CharacterEntity getCharacter() {
         return character;
     }
 
-    public void setCharacter(Character character) {
+    public void setCharacter(CharacterEntity character) {
         this.character = character;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

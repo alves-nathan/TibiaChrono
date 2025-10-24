@@ -24,8 +24,11 @@ public class World {
     private String gameWorldType;
 
     public World(){}
-    public World(String name, String pvptype, String location){this.name=name;this.pvptype=pvptype;this.location=location;}
-
+    public World(String name, String pvptype, String location){
+        this.name=name;
+        this.pvptype=pvptype;
+        this.location=location;
+    }
 
     public Integer getId() {
         return id;

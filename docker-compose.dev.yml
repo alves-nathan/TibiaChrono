@@ -42,8 +42,7 @@ services:
       - -DskipTests
       - spring-boot:run
       - -Dspring-boot.run.profiles=dev
-      - -X
-      - -Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:9003
+      - -Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:9003
 
 
 volumes:

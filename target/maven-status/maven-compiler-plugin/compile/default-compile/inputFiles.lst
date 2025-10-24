@@ -1,4 +1,3 @@
-/workspace/src/main/java/com/nathan/tibiastats/application/service/NameService.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/StatCategory.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/persistence/UserAccountRepository.java
 /workspace/src/main/java/com/nathan/tibiastats/application/scheduler/WorldScrapeScheduler.java
@@ -19,6 +18,7 @@
 /workspace/src/main/java/com/nathan/tibiastats/domain/port/ScrapePort.java
 /workspace/src/main/java/com/nathan/tibiastats/config/OpenApiConfig.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterName.java
+/workspace/src/main/java/com/nathan/tibiastats/application/service/CharacterNamingService.java
 /workspace/src/main/java/com/nathan/tibiastats/application/service/AnalyticsService.java
 /workspace/src/main/java/com/nathan/tibiastats/config/DbUserDetailsService.java
 /workspace/src/main/java/com/nathan/tibiastats/application/command/UpdateHighscoresCommand.java
@@ -41,6 +41,7 @@
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterStatRecord.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/port/CharacterDetailPort.java
 /workspace/src/main/java/com/nathan/tibiastats/application/service/ScrapeService.java
+/workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterEntity.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/adapter/web/rest/OnlineController.java
 /workspace/src/main/java/com/nathan/tibiastats/application/service/TokenService.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/Guild.java
@@ -48,7 +49,6 @@
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterDeath.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/persistence/RefreshTokenRepository.java
 /workspace/src/main/java/com/nathan/tibiastats/application/mediator/Mediator.java
-/workspace/src/main/java/com/nathan/tibiastats/domain/model/Character.java
 /workspace/src/main/java/com/nathan/tibiastats/application/mediator/Command.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/ScrapePlayer.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/port/AnalyticsQueryPort.java

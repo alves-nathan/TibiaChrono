@@ -7,6 +7,7 @@ public class Vocation {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private String name;
+    @Column(name = "promotion_name")
     private String promotionName;
 
     public Integer getId() {

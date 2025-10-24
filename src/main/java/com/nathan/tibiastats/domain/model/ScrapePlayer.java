@@ -16,9 +16,9 @@ public class ScrapePlayer {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "character_id")
-    private Character character;
+    private CharacterEntity character;
 
-    public ScrapePlayer(Scrape scrape, Character character) {
+    public ScrapePlayer(Scrape scrape, CharacterEntity character) {
         this.scrape = scrape;
         this.character = character;
     }
@@ -41,11 +41,11 @@ public class ScrapePlayer {
         this.scrape = scrape;
     }
 
-    public Character getCharacter() {
+    public CharacterEntity getCharacter() {
         return character;
     }
 
-    public void setCharacter(Character character) {
+    public void setCharacter(CharacterEntity character) {
         this.character = character;
     }
 }

@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.graphql;
 
 import com.nathan.tibiastats.application.service.AnalyticsService;
+import com.nathan.tibiastats.domain.model.CharacterName;
 import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
@@ -82,12 +83,12 @@ public class StatsGraphQLController {
 
     @QueryMapping
     public Map<String, Object> character(@Argument String name) {
-        var c = chars.findByAnyName(name).orElseThrow();
+        var c = chars.findByAnyName(name, CharacterName.INACTIVE_HORIZON).orElseThrow();
         Map<String, Object> m = new HashMap<>();
         m.put("id", c.getId());
         m.put("name", name);
         m.put("level", c.getLevel());
-        m.put("vocation", c.getVocationId());
+        m.put("vocation", c.getVocation());
         return m;
     }
 
@@ -95,7 +96,7 @@ public class StatsGraphQLController {
     public List<Map<String, Object>> characterStatHistory(
             @Argument String name,
             @Argument StatCategory category) {
-        var c = chars.findByAnyName(name).orElseThrow();
+        var c = chars.findByAnyName(name, CharacterName.INACTIVE_HORIZON).orElseThrow();
         return chars.findStatsBy(c, category).stream()
                 .map(r -> {
                     Map<String, Object> m = new HashMap<>();

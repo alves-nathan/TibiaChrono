@@ -1,22 +1,19 @@
 package com.nathan.tibiastats.domain.port;
 
 import com.nathan.tibiastats.domain.model.*;
-import com.nathan.tibiastats.domain.model.Character;
+import com.nathan.tibiastats.domain.model.CharacterEntity;
 
 import java.time.Instant;
 import java.util.Optional;
 import java.util.List;
 
 public interface CharacterRepositoryPort {
-    Optional<Character> findById(Long id);
-    Character save(Character c);
+    Optional<CharacterEntity> findById(Long id);
+    CharacterEntity save(CharacterEntity c);
     Optional<CharacterName> findActiveName(String name);
-    Optional<Character> findByAnyName(String name);
+    Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
     CharacterName saveName(CharacterName name);
-    Optional<Character> findByName(String name);
-    List<CharacterName> findCharacterNamesNewerThan(Long characterId, Instant cutoff);
+    Optional<CharacterName> findName(String name);
     CharacterStatRecord saveStat(CharacterStatRecord r);
-    List<CharacterStatRecord> findStatsBy(Character c, StatCategory category);
-
-    void deactivateName(CharacterName name);
+    List<CharacterStatRecord> findStatsBy(CharacterEntity c, StatCategory category);
 }

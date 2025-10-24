@@ -1,7 +1,7 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.*;
-import com.nathan.tibiastats.domain.model.Character;
+import com.nathan.tibiastats.domain.model.CharacterEntity;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
 import com.nathan.tibiastats.domain.port.HighscorePort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
@@ -28,13 +28,13 @@ public class HighscoreService {
                         hasData = !rows.isEmpty();
                         for (var row : rows){
                             var nameOpt = chars.findActiveName(row.name());
-                            Character character = nameOpt.flatMap(n-> chars.findByAnyName(row.name())).orElseGet(() -> {
+                            CharacterEntity character = nameOpt.flatMap(n-> chars.findByAnyName(row.name(), CharacterName.INACTIVE_HORIZON)).orElseGet(() -> {
                                 var n = new CharacterName(); n.setName(row.name()); n.setActive(true); n = chars.saveName(n);
-                                var c = new Character(); c.getNames().add(n); return chars.save(c);
+                                var c = new CharacterEntity(); c.getNames().add(n); return chars.save(c);
                             });
                             var rec = new CharacterStatRecord();
                             rec.setCharacter(character); rec.setWorld(world); rec.setCategory(category);
-                            rec.setDate(date); rec.setTimestamp(ts); rec.setValue(row.value()); rec.setRank(row.rank());
+                            rec.setDate(date); rec.setScrapedAt(ts); rec.setValue(row.value()); rec.setRank(row.rank());
                             chars.saveStat(rec);
                         }
                         page++;

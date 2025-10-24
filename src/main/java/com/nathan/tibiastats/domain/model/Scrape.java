@@ -14,9 +14,9 @@ public class Scrape {
     @ManyToOne(optional=false)
     @JoinColumn(name="world_id")
     private World world;
-    @Column(name = "scrape_time")
+    @Column(name = "scrape_time", nullable = false)
     private Instant scrapetime;
-    @Column(name = "players_online")
+    @Column(name = "players_online", nullable = false)
     private Integer playersOnline;
 
     @OneToMany(mappedBy = "scrape", cascade = CascadeType.ALL)
@@ -35,6 +35,11 @@ public class Scrape {
         this.world = world;
         this.scrapetime = scrapetime;
         this.playersOnline = playersOnline;
+    }
+
+    public void addPlayer(ScrapePlayer sp) {
+        sp.setScrape(this);
+        this.players.add(sp);
     }
 
     public Long getId() {
@@ -75,10 +80,5 @@ public class Scrape {
 
     public void setPlayers(List<ScrapePlayer> players) {
         this.players = players;
-    }
-
-    public void addPlayer(ScrapePlayer sp) {
-        players.add(sp);
-        sp.setScrape(this);
     }
 }

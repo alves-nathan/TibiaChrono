@@ -11,7 +11,7 @@ public class CharacterStatRecord {
 
     @ManyToOne(optional=false)
     @JoinColumn(name="character_id")
-    private Character character;
+    private CharacterEntity character;
 
     @Enumerated(EnumType.STRING)
     private StatCategory category;
@@ -29,8 +29,9 @@ public class CharacterStatRecord {
     @JoinColumn(name="world_id")
     private World world;
 
-    @Column(name = "timestamp")
-    private Instant timestamp;
+    @Column(name = "scraped_at")
+    private Instant scrapedAt;
+
 
     public Long getId() {
         return id;
@@ -40,11 +41,11 @@ public class CharacterStatRecord {
         this.id = id;
     }
 
-    public Character getCharacter() {
+    public CharacterEntity getCharacter() {
         return character;
     }
 
-    public void setCharacter(Character character) {
+    public void setCharacter(CharacterEntity character) {
         this.character = character;
     }
 
@@ -88,11 +89,11 @@ public class CharacterStatRecord {
         this.world = world;
     }
 
-    public Instant getTimestamp() {
-        return timestamp;
+    public Instant getScrapedAt() {
+        return scrapedAt;
     }
 
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
+    public void setScrapedAt(Instant scrapedAt) {
+        this.scrapedAt = scrapedAt;
     }
 }

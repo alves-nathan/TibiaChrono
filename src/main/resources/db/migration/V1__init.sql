@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS character_names (
   character_id INTEGER REFERENCES characters (id),
   name TEXT NOT NULL UNIQUE,
   active BOOLEAN,
-  timestamp TIMESTAMP WITH TIME ZONE
+  inactive_date TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS scrape_players (
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS character_worlds (
   character_id INTEGER NOT NULL REFERENCES characters (id),
   world_id INTEGER NOT NULL REFERENCES worlds (id),
   active BOOLEAN,
-  timestamp TIMESTAMP WITH TIME ZONE NOT NULL
+  inactive_date TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS character_deaths (
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS guild_characters (
   id BIGSERIAL PRIMARY KEY,
   guild_id INTEGER NOT NULL REFERENCES guilds (id),
   character_id INTEGER NOT NULL REFERENCES characters (id),
-  timestamp TIMESTAMP WITH TIME ZONE NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 -- Enum stored as TEXT with CHECK constraint
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS character_statrecords (
   value BIGINT,
   rank INTEGER,
   world_id INTEGER NOT NULL REFERENCES worlds (id) ON DELETE CASCADE,
-  timestamp TIMESTAMP WITH TIME ZONE NOT NULL
+  scraped_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 INSERT INTO

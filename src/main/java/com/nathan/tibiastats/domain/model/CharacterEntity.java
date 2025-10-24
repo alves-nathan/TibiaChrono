@@ -3,21 +3,23 @@ package com.nathan.tibiastats.domain.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name="characters")
-public class Character {
+public class CharacterEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    public enum Sex { male, female }
+
     @Enumerated(EnumType.STRING)
     private Sex sex;
 
-    @Column(name="vocation_id")
-    private Integer vocationId; // FK to vocation.id
+    @ManyToOne @JoinColumn(name = "vocation_id")
+    private Vocation vocation;
 
     @Column(name = "level")
     private Integer level;
@@ -37,13 +39,13 @@ public class Character {
     @Column(name = "creation_date")
     private Instant creationDate;
 
-    @OneToMany(mappedBy = "character", cascade = CascadeType.ALL)
-    private List<CharacterName> names = new ArrayList<>();
+    @OneToMany(mappedBy = "character", cascade = CascadeType.PERSIST, orphanRemoval = false)
+    private Set<CharacterName> names = new HashSet<>();
 
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL)
-    private List<CharacterWorld> worlds = new ArrayList<>();
+    private Set<CharacterWorld> worlds = new HashSet<>();
 
-    public enum Sex { male, female }
+
 
     public Long getId() {
         return id;
@@ -51,22 +53,6 @@ public class Character {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Sex getSex() {
-        return sex;
-    }
-
-    public void setSex(Sex sex) {
-        this.sex = sex;
-    }
-
-    public Integer getVocationId() {
-        return vocationId;
-    }
-
-    public void setVocationId(Integer vocationId) {
-        this.vocationId = vocationId;
     }
 
     public Integer getLevel() {
@@ -117,28 +103,40 @@ public class Character {
         this.creationDate = creationDate;
     }
 
-    public List<CharacterName> getNames() {
+    public Sex getSex() {
+        return sex;
+    }
+
+    public void setSex(Sex sex) {
+        this.sex = sex;
+    }
+
+    public Vocation getVocation() {
+        return vocation;
+    }
+
+    public void setVocation(Vocation vocation) {
+        this.vocation = vocation;
+    }
+
+    public Set<CharacterName> getNames() {
         return names;
     }
 
-    public void setNames(List<CharacterName> names) {
+    public void setNames(Set<CharacterName> names) {
         this.names = names;
     }
 
-    public List<CharacterWorld> getWorlds() {
+    public Set<CharacterWorld> getWorlds() {
         return worlds;
     }
 
-    public void setWorlds(List<CharacterWorld> worlds) {
+    public void setWorlds(Set<CharacterWorld> worlds) {
         this.worlds = worlds;
     }
 
-    public CharacterName getActiveName() {
-        for (CharacterName cn : names) {
-            if (Boolean.TRUE.equals(cn.getActive())) {
-                return cn;
-            }
-        }
-        return null;
+    public void addName(CharacterName n){
+        n.setCharacter(this);
+        names.add(n);
     }
 }

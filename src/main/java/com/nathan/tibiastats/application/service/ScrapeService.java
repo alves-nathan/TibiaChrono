@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.application.service;
 
-import com.nathan.tibiastats.domain.model.Character;
+import com.nathan.tibiastats.domain.model.CharacterEntity;
 import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.ScrapePlayer;
 import com.nathan.tibiastats.domain.model.World;
@@ -32,7 +32,7 @@ public class ScrapeService {
 
             List<ScrapePlayer> spList = new ArrayList<>();
             for (String name : online.playerNames()) {
-                Character character = new Character();
+                CharacterEntity character = new CharacterEntity();
                 ScrapePlayer sp = new ScrapePlayer();
                 sp.setScrape(scrape);
                 sp.setCharacter(character);

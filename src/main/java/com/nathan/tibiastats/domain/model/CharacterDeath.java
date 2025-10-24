@@ -6,7 +6,7 @@ import java.time.Instant;
 
 
 @Entity
-@Table(name="characterdeaths")
+@Table(name="character_deaths")
 public class CharacterDeath {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -14,7 +14,7 @@ public class CharacterDeath {
 
     @ManyToOne(optional=false)
     @JoinColumn(name="character_id")
-    private Character character;
+    private CharacterEntity character;
     @Column(name="death_date")
     private Instant deathDate;
     @Column(name="killed_by")
@@ -28,11 +28,11 @@ public class CharacterDeath {
         this.id = id;
     }
 
-    public Character getCharacter() {
+    public CharacterEntity getCharacter() {
         return character;
     }
 
-    public void setCharacter(Character character) {
+    public void setCharacter(CharacterEntity character) {
         this.character = character;
     }
 
