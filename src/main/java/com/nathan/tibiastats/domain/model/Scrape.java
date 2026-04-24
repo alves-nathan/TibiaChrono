@@ -15,25 +15,25 @@ public class Scrape {
     @JoinColumn(name="world_id")
     private World world;
     @Column(name = "scrape_time", nullable = false)
-    private Instant scrapetime;
+    private Instant scrapeTime;
     @Column(name = "players_online", nullable = false)
     private Integer playersOnline;
 
-    @OneToMany(mappedBy = "scrape", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "scrape", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ScrapePlayer> players = new ArrayList<>();
 
     public Scrape(){}
 
-    public Scrape(Long id, World world, Instant scrapetime, Integer playersOnline, String playerlist) {
+    public Scrape(Long id, World world, Instant scrapeTime, Integer playersOnline, String playerlist) {
         this.id = id;
         this.world = world;
-        this.scrapetime = scrapetime;
+        this.scrapeTime = scrapeTime;
         this.playersOnline = playersOnline;
     }
 
-    public Scrape(World world, Instant scrapetime, Integer playersOnline, String playerlist) {
+    public Scrape(World world, Instant scrapeTime, Integer playersOnline, String playerlist) {
         this.world = world;
-        this.scrapetime = scrapetime;
+        this.scrapeTime = scrapeTime;
         this.playersOnline = playersOnline;
     }
 
@@ -58,12 +58,12 @@ public class Scrape {
         this.world = world;
     }
 
-    public Instant getScrapetime() {
-        return scrapetime;
+    public Instant getScrapeTime() {
+        return scrapeTime;
     }
 
-    public void setScrapetime(Instant scrapetime) {
-        this.scrapetime = scrapetime;
+    public void setScrapeTime(Instant scrapeTime) {
+        this.scrapeTime = scrapeTime;
     }
 
     public Integer getPlayersOnline() {

@@ -2,6 +2,8 @@ package com.nathan.tibiastats.infrastructure.persistence;
 
 import com.nathan.tibiastats.domain.model.*;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -11,20 +13,25 @@ interface WorldJpa extends JpaRepository<World, Integer> {
     Optional<World> findByName(String name);
 }
 interface ScrapeJpa extends JpaRepository<Scrape, Integer> {
-    @Query("select s from Scrape s where s.world = :world and s.scrapetime between :from and :to order by s.scrapetime asc")
+    @Query("select s from Scrape s where s.world = :world and s.scrapeTime between :from and :to order by s.scrapeTime asc")
     List<Scrape> findRange(World world, Instant from, Instant to);
 
     @Query("select s from Scrape s where s.world = :world order by s.scrapeTime desc")
-    Optional<Scrape> findLatest(World world);
+    List<Scrape> findLatest(World world, Pageable pageable);
 }
+
+interface ScrapePlayerJpa extends JpaRepository<ScrapePlayer, Long> {}
 
 @Repository
 public class SpringWorldRepository implements WorldRepositoryPort {
     private final WorldJpa worlds;
     private final ScrapeJpa scrapes;
+    private final ScrapePlayerJpa scrapePlayers;
 
-    public SpringWorldRepository(WorldJpa w, ScrapeJpa s){
-        this.worlds=w; this.scrapes=s;
+    public SpringWorldRepository(WorldJpa worlds, ScrapeJpa scrapes, ScrapePlayerJpa scrapePlayers) {
+        this.worlds = worlds;
+        this.scrapes = scrapes;
+        this.scrapePlayers = scrapePlayers;
     }
 
     @Override
@@ -54,6 +61,12 @@ public class SpringWorldRepository implements WorldRepositoryPort {
 
     @Override
     public Optional<Scrape> findLatestByWorld(World w){
-        return scrapes.findLatest(w);
+        var list = scrapes.findLatest(w, PageRequest.of(0,1));
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.getFirst());
+    }
+
+    @Override
+    public ScrapePlayer saveScrapePlayer(ScrapePlayer sp) {
+        return scrapePlayers.save(sp);
     }
 }

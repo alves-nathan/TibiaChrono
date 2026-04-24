@@ -11,13 +11,23 @@ import java.time.Instant;
 import java.util.*; import java.util.List;
 
 interface CharacterJpa extends JpaRepository<CharacterEntity, Long> {
-    @Query("SELECT c FROM Character c JOIN c.names n WHERE n.name = :name (AND n.timestamp is null OR n.inactiveDate > :cutoff)")
+    @Query("""
+        SELECT n.character
+        FROM CharacterName n
+        WHERE n.name = :name
+          AND (
+               n.active = true
+               OR (n.active = false AND n.inactiveDate > :cutoff)
+          )
+        """)
     Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
 }
 interface CharacterNameJpa extends JpaRepository<CharacterName, Long> {
     Optional<CharacterName> findByNameAndActiveTrue(String name);
-    @Query("select cn from CharacterName cn where cn.character.id = :charId and cn.name = :name")
-    List<CharacterName> findCharacterActiveName(Long charId, Instant cutoff);
+
+    @Query("select cn from CharacterName cn where cn.character.id = :charId and cn.active=true")
+    Optional<CharacterName> findCharacterActiveName(Long charId);
+
     @Query("select cn from CharacterName cn where cn.name = :name")
     Optional<CharacterName> findName(String name);
 }
@@ -45,6 +55,11 @@ public class SpringCharacterRepository implements CharacterRepositoryPort {
     @Override
     public Optional<CharacterName> findName(String name) {
         return names.findName(name);
+    }
+
+    @Override
+    public Optional<CharacterName> findCharacterActiveName(Long id) {
+        return names.findCharacterActiveName(id);
     }
 
     @Override

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 
-
 @Service
 public class CharacterNamingService {
     private final CharacterRepositoryPort repo;
@@ -15,7 +14,20 @@ public class CharacterNamingService {
     public CharacterNamingService(CharacterRepositoryPort repo){ this.repo = repo; }
 
     @Transactional
-    public CharacterEntity ensureCharacterForName(String name){
+    public CharacterEntity ensureCharacterForName(String name, String formerNames){
+
+        if (!formerNames.equals(name)) {
+            for (String formerName : formerNames.split(",")) {
+                var nameClass = repo.findName(name);
+                if(nameClass.isPresent()) {
+                    CharacterName characterName = nameClass.get();
+                    if (characterName.getActive()) {
+                        this.handleRenamed(characterName.getCharacter(), name, characterName);
+                    }
+                }
+            }
+        }
+
         var character = repo.findByAnyName(name, CharacterName.INACTIVE_HORIZON);
 
         if (character.isPresent()) {
@@ -27,21 +39,22 @@ public class CharacterNamingService {
 
         var cn = CharacterName.createActive(name, c);
         repo.saveName(cn);
+        c.addName(cn);
+        c=repo.save(c);
 
         return c;
     }
 
     @Transactional
-    public void handleRenamed(CharacterEntity c, String newActiveName, String oldName){
+    public void handleRenamed(CharacterEntity c, String newActiveName, CharacterName oldName){
         // deactivate old name
-        repo.findName(oldName).ifPresent(old -> {
-            if (old.getActive().equals(Boolean.TRUE)) {
-                old.deactivate(Instant.now());
-                //create new name
-                var newName = CharacterName.createActive(newActiveName, c);
-                repo.saveName(newName);
-            }
-        });
-
+        if (oldName.getActive().equals(Boolean.TRUE)) {
+            oldName.deactivate(Instant.now());
+            //create new name
+            var newName = CharacterName.createActive(newActiveName, c);
+            repo.saveName(newName);
+            c.addName(newName);
+            repo.save(c);
+        }
     }
 }

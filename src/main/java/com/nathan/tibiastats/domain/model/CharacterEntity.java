@@ -45,8 +45,6 @@ public class CharacterEntity {
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL)
     private Set<CharacterWorld> worlds = new HashSet<>();
 
-
-
     public Long getId() {
         return id;
     }

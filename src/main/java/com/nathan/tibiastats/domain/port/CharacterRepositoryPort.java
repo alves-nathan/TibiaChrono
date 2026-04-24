@@ -11,6 +11,7 @@ public interface CharacterRepositoryPort {
     Optional<CharacterEntity> findById(Long id);
     CharacterEntity save(CharacterEntity c);
     Optional<CharacterName> findActiveName(String name);
+    Optional<CharacterName> findCharacterActiveName(Long id);
     Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
     CharacterName saveName(CharacterName name);
     Optional<CharacterName> findName(String name);

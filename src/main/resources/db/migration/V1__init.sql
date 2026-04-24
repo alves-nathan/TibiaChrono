@@ -76,7 +76,6 @@ CREATE TABLE IF NOT EXISTS guild_characters (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
--- Enum stored as TEXT with CHECK constraint
 CREATE TABLE IF NOT EXISTS character_statrecords (
   id BIGSERIAL PRIMARY KEY,
   character_id INTEGER NOT NULL REFERENCES characters (id),

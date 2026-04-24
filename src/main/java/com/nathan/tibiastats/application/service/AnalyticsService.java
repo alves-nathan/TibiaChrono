@@ -25,7 +25,7 @@ public class AnalyticsService implements AnalyticsQueryPort {
     public List<RecordPoint> getWorldOnlineHistory(String worldName, Instant from, Instant to){
         var w = worlds.findByName(worldName).orElseThrow();
         return worlds.findScrapesByWorldAndRange(w, from, to).stream()
-                .map(s -> new RecordPoint(s.getScrapetime(), s.getPlayersOnline()))
+                .map(s -> new RecordPoint(s.getScrapeTime(), s.getPlayersOnline()))
                 .collect(Collectors.toList());
     }
 }

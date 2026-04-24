@@ -1,14 +1,24 @@
 package com.nathan.tibiastats.domain.port;
 
+import com.nathan.tibiastats.domain.model.World;
+
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 public interface ScrapePort {
     record WorldSummary(String name, String pvptype, String location, int playersOnline) {}
-    record WorldOnline(String world, int playersOnline, List<String> playerNames) {}
+    record WorldOnline(
+            String world,
+            int playersOnline,
+            List<String> playerNames,
+            String onlineRecord,
+            LocalDate creationDate,
+            String transferType,
+            String gameWorldType
+    ) {}
 
     List<WorldSummary> fetchWorldsOverview();
-    WorldOnline fetchWorldPage(String worldName);
+    WorldOnline fetchWorldPage(String worldName, World world);
 
-    boolean isFormerName(String oldName, String newName);
+    String getFormerName(String oldName);
 }

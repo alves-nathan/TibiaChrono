@@ -11,7 +11,7 @@ public class World {
     @Column(nullable=false, unique=true)
     private String name;
     @Column(name = "pvp_type")
-    private String pvptype;
+    private String pvpType;
     @Column(name = "location")
     private String location;
     @Column(name = "online_record")
@@ -24,9 +24,9 @@ public class World {
     private String gameWorldType;
 
     public World(){}
-    public World(String name, String pvptype, String location){
+    public World(String name, String pvpType, String location){
         this.name=name;
-        this.pvptype=pvptype;
+        this.pvpType = pvpType;
         this.location=location;
     }
 
@@ -46,12 +46,12 @@ public class World {
         this.name = name;
     }
 
-    public String getPvptype() {
-        return pvptype;
+    public String getPvpType() {
+        return pvpType;
     }
 
-    public void setPvptype(String pvptype) {
-        this.pvptype = pvptype;
+    public void setPvpType(String pvpType) {
+        this.pvpType = pvpType;
     }
 
     public String getLocation() {

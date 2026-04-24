@@ -1,5 +1,6 @@
 package com.nathan.tibiastats.domain.port;
 
+import com.nathan.tibiastats.domain.model.ScrapePlayer;
 import com.nathan.tibiastats.domain.model.World;
 import com.nathan.tibiastats.domain.model.Scrape;
 import java.time.Instant;
@@ -13,4 +14,5 @@ public interface WorldRepositoryPort {
     Scrape saveScrape(Scrape r);
     List<Scrape> findScrapesByWorldAndRange(World w, Instant from, Instant to);
     Optional<Scrape> findLatestByWorld(World w);
+    ScrapePlayer saveScrapePlayer(ScrapePlayer sp);
 }
