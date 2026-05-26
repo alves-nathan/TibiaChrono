@@ -31,17 +31,6 @@ interface CharacterNameJpa extends JpaRepository<CharacterName, Long> {
     @Query("select cn from CharacterName cn where cn.name = :name")
     Optional<CharacterName> findName(String name);
 }
-
-interface VocationJpa extends JpaRepository<Vocation, Integer> {
-    @Query("""
-        select v
-        from Vocation v
-        where lower(v.name) = lower(:name)
-           or lower(v.promotionName) = lower(:name)
-        """)
-    Optional<Vocation> findByNameOrPromotionName(String name);
-}
-
 interface CharacterStatJpa extends JpaRepository<CharacterStatRecord, Long> {
     @Query("select r from CharacterStatRecord r where r.character = :c and r.category = :cat order by r.date asc")
     List<CharacterStatRecord> findByCat(CharacterEntity c, StatCategory cat);
@@ -52,13 +41,11 @@ public class SpringCharacterRepository implements CharacterRepositoryPort {
     private final CharacterNameJpa names;
     private final CharacterJpa chars;
     private final CharacterStatJpa stats;
-    private final VocationJpa vocations;
 
-    public SpringCharacterRepository(CharacterNameJpa names, CharacterJpa chars, CharacterStatJpa stats, VocationJpa vocations) {
+    public SpringCharacterRepository(CharacterNameJpa names, CharacterJpa chars, CharacterStatJpa stats) {
         this.names = names;
         this.chars = chars;
         this.stats = stats;
-        this.vocations = vocations;
     }
 
     public CharacterName saveName(CharacterName name){
@@ -101,13 +88,5 @@ public class SpringCharacterRepository implements CharacterRepositoryPort {
     @Override
     public Optional<CharacterName> findActiveName(String name) {
         return names.findByNameAndActiveTrue(name);
-    }
-
-    @Override
-    public Optional<Vocation> findVocationByNameOrPromotionName(String name) {
-        if (name == null || name.isBlank()) {
-            return Optional.empty();
-        }
-        return vocations.findByNameOrPromotionName(name.trim());
     }
 }

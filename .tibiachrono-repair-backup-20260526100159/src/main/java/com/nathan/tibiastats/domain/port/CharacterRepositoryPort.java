@@ -15,7 +15,6 @@ public interface CharacterRepositoryPort {
     Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
     CharacterName saveName(CharacterName name);
     Optional<CharacterName> findName(String name);
-    Optional<Vocation> findVocationByNameOrPromotionName(String name);
     CharacterStatRecord saveStat(CharacterStatRecord r);
     List<CharacterStatRecord> findStatsBy(CharacterEntity c, StatCategory category);
 }

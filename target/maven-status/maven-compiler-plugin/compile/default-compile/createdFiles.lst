@@ -18,6 +18,7 @@ com/nathan/tibiastats/infrastructure/adapter/web/rest/RegisterRequest.class
 com/nathan/tibiastats/infrastructure/persistence/WorldJpa.class
 com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.class
 com/nathan/tibiastats/domain/port/ScrapePort.class
+com/nathan/tibiastats/domain/port/ScrapePort$OnlineCharacterSnapshot.class
 com/nathan/tibiastats/infrastructure/persistence/UserAccountRepository.class
 com/nathan/tibiastats/config/AppProperties$Highscores.class
 com/nathan/tibiastats/domain/model/ScrapePlayer.class
@@ -69,6 +70,7 @@ com/nathan/tibiastats/domain/model/BlacklistedToken.class
 com/nathan/tibiastats/domain/port/CharacterDetailPort.class
 com/nathan/tibiastats/application/service/HighscoreService.class
 com/nathan/tibiastats/infrastructure/adapter/web/rest/AuthController.class
+com/nathan/tibiastats/infrastructure/persistence/VocationJpa.class
 com/nathan/tibiastats/application/service/CharacterNamingService.class
 com/nathan/tibiastats/util/JsonConverter.class
 com/nathan/tibiastats/domain/port/CharacterDetailPort$NameDetails.class

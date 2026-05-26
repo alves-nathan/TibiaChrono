@@ -2,7 +2,7 @@ package com.nathan.tibiastats.domain.model;
 
 import jakarta.persistence.*;
 
-@Entity @Table(name="vocations")
+@Entity @Table(name="vocation")
 public class Vocation {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

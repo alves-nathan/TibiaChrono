@@ -2,7 +2,6 @@ package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.ScrapePlayer;
-import com.nathan.tibiastats.domain.model.Vocation;
 import com.nathan.tibiastats.domain.model.World;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
 import com.nathan.tibiastats.domain.port.ScrapePort;
@@ -14,8 +13,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 
 @Service
 public class ScrapeService {
@@ -55,8 +52,6 @@ public class ScrapeService {
                         .name(ws.name())
                         .pvpType(ws.pvptype())
                         .location(ws.location())
-                        .transferType(ws.transferType())
-                        .gameWorldType(ws.gameWorldType())
                         .build();
 
                 ScrapePort.WorldOnline online = scrapePort.fetchWorldPage(ws.name(), pageWorld);
@@ -76,16 +71,14 @@ public class ScrapeService {
                             .name(ws.name())
                             .pvpType(ws.pvptype())
                             .location(ws.location())
-                            .transferType(ws.transferType())
-                            .gameWorldType(ws.gameWorldType())
                             .build()));
 
-            world.setPvpType(firstNonBlank(ws.pvptype(), world.getPvpType()));
-            world.setLocation(firstNonBlank(ws.location(), world.getLocation()));
-            world.setOnlineRecord(firstNonBlank(online.onlineRecord(), world.getOnlineRecord()));
-            world.setCreationDate(online.creationDate() != null ? online.creationDate() : world.getCreationDate());
-            world.setTransferType(firstNonBlank(online.transferType(), ws.transferType(), world.getTransferType()));
-            world.setGameWorldType(firstNonBlank(online.gameWorldType(), ws.gameWorldType(), world.getGameWorldType()));
+            world.setPvpType(ws.pvptype());
+            world.setLocation(ws.location());
+            world.setOnlineRecord(online.onlineRecord());
+            world.setCreationDate(online.creationDate());
+            world.setTransferType(online.transferType());
+            world.setGameWorldType(online.gameWorldType());
             worldRepo.save(world);
 
             Scrape scrape = new Scrape();
@@ -94,12 +87,12 @@ public class ScrapeService {
             scrape.setPlayersOnline(online.playersOnline());
 
             int addedPlayers = 0;
-            for (ScrapePort.OnlineCharacterSnapshot player : online.players()) {
-                if (player == null || player.name() == null || player.name().isBlank()) {
+            for (String playerName : online.playerNames()) {
+                if (playerName == null || playerName.isBlank()) {
                     continue;
                 }
 
-                String normalizedPlayerName = player.name().trim();
+                String normalizedPlayerName = playerName.trim();
 
                 // Avoid one HTTP request per online character during the scheduled world scrape.
                 // Rename reconciliation can be done later by a dedicated character-detail job.
@@ -110,24 +103,6 @@ public class ScrapeService {
                         namingService.handleRenamed(character, normalizedPlayerName, name);
                     }
                 });
-
-                boolean characterChanged = false;
-                if (player.level() != null && !Objects.equals(character.getLevel(), player.level())) {
-                    character.setLevel(player.level());
-                    characterChanged = true;
-                }
-
-                if (player.vocation() != null && !player.vocation().isBlank()) {
-                    var vocation = characterRepo.findVocationByNameOrPromotionName(player.vocation().trim());
-                    if (vocation.isPresent() && !sameVocation(character.getVocation(), vocation.get())) {
-                        character.setVocation(vocation.get());
-                        characterChanged = true;
-                    }
-                }
-
-                if (characterChanged) {
-                    characterRepo.save(character);
-                }
 
                 ScrapePlayer sp = new ScrapePlayer();
                 sp.setCharacter(character);
@@ -141,35 +116,16 @@ public class ScrapeService {
         });
     }
 
-    private boolean sameVocation(Vocation current, Vocation scraped) {
-        return current != null && scraped != null && Objects.equals(current.getId(), scraped.getId());
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.trim().isBlank()) {
-                return value.trim();
-            }
-        }
-        return null;
-    }
-
     private static class WorldBuilder {
-        private String name, pvpType, location, transferType, gameWorldType;
-
+        private String name, pvpType, location;
         WorldBuilder name(String v) { this.name = v; return this; }
         WorldBuilder pvpType(String v) { this.pvpType = v; return this; }
         WorldBuilder location(String v) { this.location = v; return this; }
-        WorldBuilder transferType(String v) { this.transferType = v; return this; }
-        WorldBuilder gameWorldType(String v) { this.gameWorldType = v; return this; }
-
         World build() {
             World w = new World();
             w.setName(name);
             w.setPvpType(pvpType);
             w.setLocation(location);
-            w.setTransferType(transferType);
-            w.setGameWorldType(gameWorldType);
             return w;
         }
     }

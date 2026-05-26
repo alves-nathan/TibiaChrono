@@ -6,25 +6,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface ScrapePort {
-    record WorldSummary(
-            String name,
-            String pvptype,
-            String location,
-            int playersOnline,
-            String transferType,
-            String gameWorldType
-    ) {}
-
-    record OnlineCharacterSnapshot(
-            String name,
-            Integer level,
-            String vocation
-    ) {}
-
+    record WorldSummary(String name, String pvptype, String location, int playersOnline) {}
     record WorldOnline(
             String world,
             int playersOnline,
-            List<OnlineCharacterSnapshot> players,
+            List<String> playerNames,
             String onlineRecord,
             LocalDate creationDate,
             String transferType,
