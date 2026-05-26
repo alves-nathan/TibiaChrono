@@ -19,7 +19,12 @@ public class JsoupCharacterAdapter implements CharacterDetailPort {
     private static final String CHARACTER_PAGE_URL_TEMPLATE =
             "https://www.tibia.com/community/?subtopic=characters&name=%s&world=%s";
 
-    public CharacterEntity fetchCharacterDetails() {
+    /*public CharacterEntity fetchCharacterDetails() {
 
+    }*/
+
+    @Override
+    public NameDetails fetchNameDetails(String worldName, String characterName) {
+        return new NameDetails(characterName, List.of());
     }
 }

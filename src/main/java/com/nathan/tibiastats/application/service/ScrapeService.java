@@ -10,8 +10,6 @@ import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class ScrapeService {
@@ -52,9 +50,6 @@ public class ScrapeService {
             scrape.setWorld(world);
             scrape.setScrapeTime(Instant.now());
             scrape.setPlayersOnline(online.playersOnline());
-            scrape = worldRepo.saveScrape(scrape);
-
-            List<ScrapePlayer> playerList = new ArrayList<>();
 
             for (String playerName : online.playerNames()) {
                 String formerNames = scrapePort.getFormerName(playerName);
@@ -69,14 +64,10 @@ public class ScrapeService {
                     }
                 });
 
-
                 ScrapePlayer sp = new ScrapePlayer();
-                sp.setScrape(scrape);
                 sp.setCharacter(character);
-                playerList.add(sp);
-                worldRepo.saveScrapePlayer(sp);
+                scrape.addPlayer(sp);
             }
-            scrape.setPlayers(playerList);
             worldRepo.saveScrape(scrape);
         }
     }

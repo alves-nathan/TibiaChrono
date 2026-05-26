@@ -12,7 +12,7 @@ import java.time.Instant; import java.util.*; import java.util.List;
 interface WorldJpa extends JpaRepository<World, Integer> {
     Optional<World> findByName(String name);
 }
-interface ScrapeJpa extends JpaRepository<Scrape, Integer> {
+interface ScrapeJpa extends JpaRepository<Scrape, Long> {
     @Query("select s from Scrape s where s.world = :world and s.scrapeTime between :from and :to order by s.scrapeTime asc")
     List<Scrape> findRange(World world, Instant from, Instant to);
 

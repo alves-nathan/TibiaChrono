@@ -31,15 +31,15 @@
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringWorldRepository.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/Vocation.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java
-/workspace/src/main/java/com/nathan/tibiastats/util/JsonConverter.java
 /workspace/src/main/java/com/nathan/tibiastats/application/service/HighscoreService.java
+/workspace/src/main/java/com/nathan/tibiastats/util/JsonConverter.java
 /workspace/src/main/java/com/nathan/tibiastats/application/mediator/CommandHandler.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupCharacterAdapter.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/RefreshToken.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/Scrape.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupHighscoreAdapter.java
-/workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterStatRecord.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/port/CharacterDetailPort.java
+/workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterStatRecord.java
 /workspace/src/main/java/com/nathan/tibiastats/application/service/ScrapeService.java
 /workspace/src/main/java/com/nathan/tibiastats/domain/model/CharacterEntity.java
 /workspace/src/main/java/com/nathan/tibiastats/infrastructure/adapter/web/rest/OnlineController.java

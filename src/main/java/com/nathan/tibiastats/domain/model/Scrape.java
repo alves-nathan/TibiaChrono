@@ -79,6 +79,9 @@ public class Scrape {
     }
 
     public void setPlayers(List<ScrapePlayer> players) {
-        this.players = players;
+        this.players.clear();
+        if (players != null) {
+            players.forEach(this::addPlayer);
+        }
     }
 }
