@@ -5,6 +5,7 @@ com/nathan/tibiastats/domain/model/CharacterDeath.class
 com/nathan/tibiastats/domain/model/CharacterEntity$Sex.class
 com/nathan/tibiastats/config/TokenBlacklistFilter.class
 com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupHighscoreAdapter$1.class
+com/nathan/tibiastats/domain/port/CharacterDetailPort$CharacterDetails.class
 com/nathan/tibiastats/TibiastatsApplication.class
 com/nathan/tibiastats/domain/model/StatCategory.class
 com/nathan/tibiastats/application/service/ScrapeService$WorldBuilder.class
@@ -19,7 +20,9 @@ com/nathan/tibiastats/infrastructure/persistence/WorldJpa.class
 com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.class
 com/nathan/tibiastats/domain/port/ScrapePort.class
 com/nathan/tibiastats/domain/port/ScrapePort$OnlineCharacterSnapshot.class
+com/nathan/tibiastats/domain/model/CharacterNameNormalizer.class
 com/nathan/tibiastats/infrastructure/persistence/UserAccountRepository.class
+com/nathan/tibiastats/infrastructure/persistence/CharacterReferenceMaintenanceJpa.class
 com/nathan/tibiastats/config/AppProperties$Highscores.class
 com/nathan/tibiastats/domain/model/ScrapePlayer.class
 com/nathan/tibiastats/domain/port/ScrapePort$WorldSummary.class
@@ -33,6 +36,8 @@ com/nathan/tibiastats/domain/port/AnalyticsQueryPort.class
 com/nathan/tibiastats/infrastructure/adapter/web/rest/AuthRequest.class
 com/nathan/tibiastats/infrastructure/persistence/ScrapePlayerJpa.class
 com/nathan/tibiastats/infrastructure/persistence/ScrapeJpa.class
+com/nathan/tibiastats/application/service/CharacterDetailsService.class
+com/nathan/tibiastats/application/scheduler/CharacterDetailsScrapeScheduler.class
 com/nathan/tibiastats/domain/model/RefreshToken.class
 com/nathan/tibiastats/domain/port/CharacterRepositoryPort.class
 com/nathan/tibiastats/domain/model/World.class
@@ -47,9 +52,11 @@ com/nathan/tibiastats/application/service/ScrapeService.class
 com/nathan/tibiastats/domain/model/CharacterName.class
 com/nathan/tibiastats/infrastructure/persistence/CharacterJpa.class
 com/nathan/tibiastats/domain/model/CharacterEntity.class
+com/nathan/tibiastats/application/service/CharacterDetailsService$SaveResult.class
 com/nathan/tibiastats/application/scheduler/WorldScrapeScheduler.class
 com/nathan/tibiastats/config/AppProperties.class
 com/nathan/tibiastats/infrastructure/adapter/web/graphql/StatsGraphQLController.class
+com/nathan/tibiastats/config/AppProperties$CharacterDetails.class
 com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupHighscoreAdapter.class
 com/nathan/tibiastats/domain/model/CharacterWorld.class
 com/nathan/tibiastats/infrastructure/persistence/SpringWorldRepository.class

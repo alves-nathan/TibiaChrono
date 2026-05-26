@@ -8,18 +8,45 @@ import org.springframework.context.annotation.Configuration;
 public class AppProperties {
     private Worlds worlds = new Worlds();
     private Highscores highscores = new Highscores();
+    private CharacterDetails characterDetails = new CharacterDetails();
 
     public static class Worlds {
         private long rateMs = 60000L;
         public long getRateMs(){return rateMs;}
         public void setRateMs(long v){this.rateMs=v;}
     }
+
     public static class Highscores {
         private String cron = "0 0 7 * * *";
         public String getCron(){return cron;}
         public void setCron(String c){this.cron=c;}
     }
 
+    public static class CharacterDetails {
+        private boolean enabled = true;
+        private long rateMs = 300000L;
+        private long initialDelayMs = 15000L;
+        private int batchSize = 25;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+        public long getRateMs() { return rateMs; }
+        public void setRateMs(long rateMs) { this.rateMs = rateMs; }
+
+        public long getInitialDelayMs() { return initialDelayMs; }
+        public void setInitialDelayMs(long initialDelayMs) { this.initialDelayMs = initialDelayMs; }
+
+        public int getBatchSize() { return batchSize; }
+        public void setBatchSize(int batchSize) { this.batchSize = batchSize; }
+    }
+
     public Worlds getWorlds() {return worlds;}
+    public void setWorlds(Worlds worlds) { this.worlds = worlds; }
+
     public Highscores getHighscores() {return highscores;}
+    public void setHighscores(Highscores highscores) { this.highscores = highscores; }
+
+    public CharacterDetails getCharacterDetails() { return characterDetails; }
+    public void setCharacterDetails(CharacterDetails characterDetails) { this.characterDetails = characterDetails; }
 }

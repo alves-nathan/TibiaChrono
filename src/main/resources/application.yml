@@ -15,6 +15,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  task:
+    scheduling:
+      pool:
+        size: 4
+
   graphql:
     path: /graphql.
 
@@ -25,6 +30,14 @@ server:
 tibiastats:
   scrape:
     worlds:
-    rate-ms: 60000 # every 1 minute by default
-  highscores:
-    cron: "0 0 7 * * *" # daily 03:00
+      rate-ms: 60000
+    character-details:
+      enabled: true
+      rate-ms: 60000           # 1 min between small batches during dev
+      initial-delay-ms: 15000  # wait 15s after startup before first batch
+      batch-size: 50            # adjustable through TIBIASTATS_SCRAPE_CHARACTER_DETAILS_BATCH_SIZE
+    highscores:
+      cron: "0 0 7 * * *" # daily at 7 AM
+  jwt:
+    access-ttl-ms: 900000
+    refresh-ttl-ms: 1209600000

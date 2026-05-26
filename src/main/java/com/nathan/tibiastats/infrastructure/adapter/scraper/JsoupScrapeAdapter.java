@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.infrastructure.adapter.scraper;
 
 import com.nathan.tibiastats.domain.model.World;
+import com.nathan.tibiastats.domain.model.CharacterNameNormalizer;
 import com.nathan.tibiastats.domain.port.ScrapePort;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -169,14 +170,14 @@ public class JsoupScrapeAdapter implements ScrapePort {
                     .get();
             Elements tr = doc.select("table.TableContent tr");
             if (!doc.text().contains("Former Names:")) {
-                return name;
+                return CharacterNameNormalizer.normalize(name);
             }
             for (Element line : tr) {
                 if (line.text().contains("Former Names:")) {
-                    return line.select("td:last-child").text();
+                    return CharacterNameNormalizer.normalizeCsv(line.select("td:last-child").text());
                 }
             }
-            return name;
+            return CharacterNameNormalizer.normalize(name);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.domain.port;
 
 import com.nathan.tibiastats.domain.model.World;
+import com.nathan.tibiastats.domain.model.CharacterNameNormalizer;
 
 import java.time.LocalDate;
 import java.util.List;

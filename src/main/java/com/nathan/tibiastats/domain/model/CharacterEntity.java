@@ -18,7 +18,8 @@ public class CharacterEntity {
     @Enumerated(EnumType.STRING)
     private Sex sex;
 
-    @ManyToOne @JoinColumn(name = "vocation_id")
+    @ManyToOne
+    @JoinColumn(name = "vocation_id")
     private Vocation vocation;
 
     @Column(name = "level")
@@ -39,102 +40,65 @@ public class CharacterEntity {
     @Column(name = "creation_date")
     private Instant creationDate;
 
+    @Column(name = "details_last_scraped_at")
+    private Instant detailsLastScrapedAt;
+
+    @Column(name = "details_last_scrape_status")
+    private String detailsLastScrapeStatus;
+
+    @Column(name = "details_last_scrape_error", columnDefinition = "text")
+    private String detailsLastScrapeError;
+
     @OneToMany(mappedBy = "character", cascade = CascadeType.PERSIST, orphanRemoval = false)
     private Set<CharacterName> names = new HashSet<>();
 
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL)
     private Set<CharacterWorld> worlds = new HashSet<>();
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Integer getLevel() { return level; }
+    public void setLevel(Integer level) { this.level = level; }
 
-    public Integer getLevel() {
-        return level;
-    }
+    public Integer getAchievementPoints() { return achievementPoints; }
+    public void setAchievementPoints(Integer achievementPoints) { this.achievementPoints = achievementPoints; }
 
-    public void setLevel(Integer level) {
-        this.level = level;
-    }
+    public String getResidence() { return residence; }
+    public void setResidence(String residence) { this.residence = residence; }
 
-    public Integer getAchievementPoints() {
-        return achievementPoints;
-    }
+    public OffsetDateTime getLastLogin() { return lastLogin; }
+    public void setLastLogin(OffsetDateTime lastLogin) { this.lastLogin = lastLogin; }
 
-    public void setAchievementPoints(Integer achievementPoints) {
-        this.achievementPoints = achievementPoints;
-    }
+    public String getAccStatus() { return accStatus; }
+    public void setAccStatus(String accStatus) { this.accStatus = accStatus; }
 
-    public String getResidence() {
-        return residence;
-    }
+    public Instant getCreationDate() { return creationDate; }
+    public void setCreationDate(Instant creationDate) { this.creationDate = creationDate; }
 
-    public void setResidence(String residence) {
-        this.residence = residence;
-    }
+    public Instant getDetailsLastScrapedAt() { return detailsLastScrapedAt; }
+    public void setDetailsLastScrapedAt(Instant detailsLastScrapedAt) { this.detailsLastScrapedAt = detailsLastScrapedAt; }
 
-    public OffsetDateTime getLastLogin() {
-        return lastLogin;
-    }
+    public String getDetailsLastScrapeStatus() { return detailsLastScrapeStatus; }
+    public void setDetailsLastScrapeStatus(String detailsLastScrapeStatus) { this.detailsLastScrapeStatus = detailsLastScrapeStatus; }
 
-    public void setLastLogin(OffsetDateTime lastLogin) {
-        this.lastLogin = lastLogin;
-    }
+    public String getDetailsLastScrapeError() { return detailsLastScrapeError; }
+    public void setDetailsLastScrapeError(String detailsLastScrapeError) { this.detailsLastScrapeError = detailsLastScrapeError; }
 
-    public String getAccStatus() {
-        return accStatus;
-    }
+    public Sex getSex() { return sex; }
+    public void setSex(Sex sex) { this.sex = sex; }
 
-    public void setAccStatus(String accStatus) {
-        this.accStatus = accStatus;
-    }
+    public Vocation getVocation() { return vocation; }
+    public void setVocation(Vocation vocation) { this.vocation = vocation; }
 
-    public Instant getCreationDate() {
-        return creationDate;
-    }
+    public Set<CharacterName> getNames() { return names; }
+    public void setNames(Set<CharacterName> names) { this.names = names; }
 
-    public void setCreationDate(Instant creationDate) {
-        this.creationDate = creationDate;
-    }
+    public Set<CharacterWorld> getWorlds() { return worlds; }
+    public void setWorlds(Set<CharacterWorld> worlds) { this.worlds = worlds; }
 
-    public Sex getSex() {
-        return sex;
-    }
-
-    public void setSex(Sex sex) {
-        this.sex = sex;
-    }
-
-    public Vocation getVocation() {
-        return vocation;
-    }
-
-    public void setVocation(Vocation vocation) {
-        this.vocation = vocation;
-    }
-
-    public Set<CharacterName> getNames() {
-        return names;
-    }
-
-    public void setNames(Set<CharacterName> names) {
-        this.names = names;
-    }
-
-    public Set<CharacterWorld> getWorlds() {
-        return worlds;
-    }
-
-    public void setWorlds(Set<CharacterWorld> worlds) {
-        this.worlds = worlds;
-    }
-
-    public void addName(CharacterName n){
-        n.setCharacter(this);
-        names.add(n);
+    public void addName(CharacterName name){
+        name.setCharacter(this);
+        names.add(name);
     }
 }

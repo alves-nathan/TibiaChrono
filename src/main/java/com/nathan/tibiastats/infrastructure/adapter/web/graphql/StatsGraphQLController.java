@@ -83,7 +83,7 @@ public class StatsGraphQLController {
 
     @QueryMapping
     public Map<String, Object> character(@Argument String name) {
-        var c = chars.findByAnyName(name, CharacterName.INACTIVE_HORIZON).orElseThrow();
+        var c = chars.findByAnyName(name, CharacterName.inactiveHorizon()).orElseThrow();
         Map<String, Object> m = new HashMap<>();
         m.put("id", c.getId());
         m.put("name", name);
@@ -96,7 +96,7 @@ public class StatsGraphQLController {
     public List<Map<String, Object>> characterStatHistory(
             @Argument String name,
             @Argument StatCategory category) {
-        var c = chars.findByAnyName(name, CharacterName.INACTIVE_HORIZON).orElseThrow();
+        var c = chars.findByAnyName(name, CharacterName.inactiveHorizon()).orElseThrow();
         return chars.findStatsBy(c, category).stream()
                 .map(r -> {
                     Map<String, Object> m = new HashMap<>();

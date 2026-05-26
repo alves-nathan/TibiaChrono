@@ -28,7 +28,7 @@ public class HighscoreService {
                         hasData = !rows.isEmpty();
                         for (var row : rows){
                             var nameOpt = chars.findActiveName(row.name());
-                            CharacterEntity character = nameOpt.flatMap(n-> chars.findByAnyName(row.name(), CharacterName.INACTIVE_HORIZON)).orElseGet(() -> {
+                            CharacterEntity character = nameOpt.flatMap(n-> chars.findByAnyName(row.name(), CharacterName.inactiveHorizon())).orElseGet(() -> {
                                 var n = new CharacterName(); n.setName(row.name()); n.setActive(true); n = chars.saveName(n);
                                 var c = new CharacterEntity(); c.getNames().add(n); return chars.save(c);
                             });
