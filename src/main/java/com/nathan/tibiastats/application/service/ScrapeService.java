@@ -39,17 +39,22 @@ public class ScrapeService {
         this.transactionTemplate = transactionTemplate;
     }
 
-    public void updateAllWorlds() {
+    public ScrapeJobResult updateAllWorlds() {
         List<ScrapePort.WorldSummary> worlds = scrapePort.fetchWorldsOverview();
 
         if (worlds.isEmpty()) {
             log.warn("Worlds overview returned no worlds. No scrape records will be created.");
-            return;
+            return ScrapeJobResult.empty();
         }
 
         log.info("Starting world scrape for {} worlds", worlds.size());
 
+        int processed = 0;
+        int updated = 0;
+        int failed = 0;
+
         for (ScrapePort.WorldSummary ws : worlds) {
+            processed++;
             try {
                 World pageWorld = new WorldBuilder()
                         .name(ws.name())
@@ -61,12 +66,15 @@ public class ScrapeService {
 
                 ScrapePort.WorldOnline online = scrapePort.fetchWorldPage(ws.name(), pageWorld);
                 saveWorldScrape(ws, online);
+                updated++;
             } catch (Exception e) {
+                failed++;
                 log.error("Failed to scrape world {}. Continuing with next world.", ws.name(), e);
             }
         }
 
-        log.info("Finished world scrape cycle");
+        log.info("Finished world scrape cycle: processed={}, updated={}, failed={}", processed, updated, failed);
+        return ScrapeJobResult.of(processed, 0, updated, failed);
     }
 
     private void saveWorldScrape(ScrapePort.WorldSummary ws, ScrapePort.WorldOnline online) {

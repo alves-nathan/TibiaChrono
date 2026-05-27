@@ -1,6 +1,8 @@
 package com.nathan.tibiastats.application.scheduler;
 
 import com.nathan.tibiastats.application.service.CharacterDetailsService;
+import com.nathan.tibiastats.application.service.ScrapeJobResult;
+import com.nathan.tibiastats.application.service.ScrapeJobService;
 import com.nathan.tibiastats.config.AppProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,11 +16,14 @@ public class CharacterDetailsScrapeScheduler {
 
     private final CharacterDetailsService characterDetailsService;
     private final AppProperties appProperties;
+    private final ScrapeJobService scrapeJobService;
 
     public CharacterDetailsScrapeScheduler(CharacterDetailsService characterDetailsService,
-                                           AppProperties appProperties) {
+                                           AppProperties appProperties,
+                                           ScrapeJobService scrapeJobService) {
         this.characterDetailsService = characterDetailsService;
         this.appProperties = appProperties;
+        this.scrapeJobService = scrapeJobService;
     }
 
     @Scheduled(
@@ -31,9 +36,16 @@ public class CharacterDetailsScrapeScheduler {
             return;
         }
 
+        Long jobId = scrapeJobService.start(ScrapeJobService.CHARACTER_DETAILS_SCRAPER);
         int batchSize = Math.max(1, appProperties.getCharacterDetails().getBatchSize());
         log.info("{} Scheduler tick started. batchSize={}", LOG_PREFIX, batchSize);
-        characterDetailsService.updateMissingDetailsBatch();
-        log.info("{} Scheduler tick finished", LOG_PREFIX);
+        try {
+            ScrapeJobResult result = characterDetailsService.updateMissingDetailsBatch();
+            scrapeJobService.finishSuccess(jobId, result);
+            log.info("{} Scheduler tick finished", LOG_PREFIX);
+        } catch (Exception e) {
+            scrapeJobService.finishFailure(jobId, ScrapeJobResult.empty(), e);
+            throw e;
+        }
     }
 }

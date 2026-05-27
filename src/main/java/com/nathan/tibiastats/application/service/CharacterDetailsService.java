@@ -45,13 +45,13 @@ public class CharacterDetailsService {
      * least recently attempted characters, so the first character is only retried after
      * all other active characters have also been attempted.
      */
-    public void updateMissingDetailsBatch() {
+    public ScrapeJobResult updateMissingDetailsBatch() {
         int batchSize = Math.max(1, appProperties.getCharacterDetails().getBatchSize());
         List<CharacterName> namesToRefresh = characterRepo.findActiveNamesForDetailsRefresh(batchSize);
 
         if (namesToRefresh.isEmpty()) {
             log.info("{} No active characters available for detail scrape", LOG_PREFIX);
-            return;
+            return ScrapeJobResult.empty();
         }
 
         log.info("{} Starting character detail scrape batch: selectedNames={}, batchSize={}", LOG_PREFIX, namesToRefresh.size(), batchSize);
@@ -101,6 +101,8 @@ public class CharacterDetailsService {
                 "{} Finished character detail scrape batch: updated={}, unchanged={}, notFound={}, empty={}, failed={}",
                 LOG_PREFIX, updated, unchanged, notFound, empty, failed
         );
+        int processed = updated + unchanged + notFound + empty + failed;
+        return ScrapeJobResult.of(processed, 0, updated + unchanged, notFound + empty + failed);
     }
 
     private SaveResult saveCharacterDetails(Long characterId,

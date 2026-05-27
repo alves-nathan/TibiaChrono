@@ -5,9 +5,12 @@ schema {
 enum StatCategory {
     ACHIEVEMENTS
     AXE_FIGHTING
+    BOSS_POINTS
+    BOUNTY_POINTS_EARNED
     CHARM_POINTS
     CLUB_FIGHTING
     DISTANCE_FIGHTING
+    DROME_SCORE
     EXPERIENCE
     FISHING
     FIST_FIGHTING
@@ -16,8 +19,7 @@ enum StatCategory {
     MAGIC_LEVEL
     SHIELDING
     SWORD_FIGHTING
-    DROME_SCORE
-    BOSS_POINTS
+    WEEKLY_TASKS_COMPLETED
 }
 
 type Query {
@@ -25,8 +27,31 @@ type Query {
     worldsOnline: [WorldOnline!]!
     worldOnlineNow(name: String!): WorldOnline
     worldOnlineHistory(name: String!, from: String, to: String): [OnlinePoint!]!
+
+    worlds: [World!]!
+    world(name: String!): World
     character(name: String!): Character
-    characterStatHistory(name: String!, category: StatCategory!): [StatPoint!]!
+    characterNames(name: String!): [CharacterName!]!
+    characterHighscores(
+        name: String!,
+        category: StatCategory,
+        world: String,
+        vocationFilterId: Int,
+        from: String,
+        to: String,
+        limit: Int
+    ): [HighscoreRecord!]!
+    highscores(
+        world: String!,
+        category: StatCategory!,
+        vocationFilterId: Int,
+        date: String,
+        limit: Int
+    ): [HighscoreRecord!]!
+    scrapeJobs(jobName: String, status: String, limit: Int): [ScrapeJob!]!
+
+    # Legacy alias kept for compatibility with the previous UI/tests.
+    characterStatHistory(name: String!, category: StatCategory!): [HighscoreRecord!]!
 }
 
 type WorldOnline {
@@ -34,25 +59,72 @@ type WorldOnline {
     playersOnline: Int!
 }
 
-
 type OnlinePoint {
     timestamp: String!
     playersOnline: Int!
 }
 
-type StatPoint {
-    date: String!
-    value: Int!
-    rank: Int
-    world: String!
+type World {
+    id: ID!
+    name: String!
+    pvpType: String
+    location: String
+    onlineRecord: String
+    creationDate: String
+    transferType: String
+    gameWorldType: String
+    playersOnline: Int
+    lastScrapedAt: String
 }
 
 type Character {
     id: ID!
-    name: String!
+    activeName: String
     level: Int
+    sex: String
     vocation: String
+    vocationPromotionName: String
+    achievementPoints: Int
     residence: String
     lastLogin: String
-    status: String
+    accStatus: String
+    creationDate: String
+    detailsLastScrapedAt: String
+    detailsLastScrapeStatus: String
+}
+
+type CharacterName {
+    id: ID!
+    characterId: ID!
+    name: String!
+    active: Boolean
+    inactiveDate: String
+}
+
+type HighscoreRecord {
+    id: ID!
+    rank: Int
+    characterName: String
+    characterId: ID!
+    world: String!
+    category: String!
+    vocationFilterId: Int
+    date: String!
+    value: String
+    valueText: String
+    scrapedAt: String!
+}
+
+type ScrapeJob {
+    id: ID!
+    jobName: String!
+    status: String!
+    startedAt: String!
+    finishedAt: String
+    durationMs: String
+    itemsProcessed: Int
+    itemsCreated: Int
+    itemsUpdated: Int
+    itemsFailed: Int
+    errorMessage: String
 }

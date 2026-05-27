@@ -1,38 +1,42 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
-import com.nathan.tibiastats.domain.model.*;
-import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
+import com.nathan.tibiastats.application.service.ApiQueryService;
+import com.nathan.tibiastats.domain.model.StatCategory;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.Serializable;
-import java.util.*; import java.util.stream.*;
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/character")
+@RequestMapping("/api/characters")
 public class CharacterController {
-    private final CharacterRepositoryPort repo;
-    public CharacterController(CharacterRepositoryPort r){this.repo=r;}
+    private final ApiQueryService queries;
 
-    @GetMapping("/{name}")
-    public Map<String,Object> getCharacter(@PathVariable String name){
-        var c = repo.findByAnyName(name, CharacterName.inactiveHorizon()).orElseThrow();
-        // Minimal fields; extend as you start filling CharacterEntity fields
-        return Map.of("id", c.getId(), "name", name, "level", c.getLevel(), "vocationId", c.getVocation().getId());
+    public CharacterController(ApiQueryService queries) {
+        this.queries = queries;
     }
 
-    @GetMapping("/{name}/stats")
-    public List<Map<String, Serializable>> getStats(@PathVariable String name,
-                                                    @RequestParam StatCategory category) {
-        var c = repo.findByAnyName(name, CharacterName.inactiveHorizon()).orElseThrow();
-        return repo.findStatsBy(c, category).stream()
-                .map(r -> {
-                    Map<String, Serializable> m = new HashMap<>();
-                    m.put("date", r.getDate().toString());
-                    m.put("value", r.getValue());
-                    m.put("rank", r.getRank());
-                    m.put("world", r.getWorld().getName());
-                    return m;
-                })
-                .collect(Collectors.toList());
+    @GetMapping("/{name}")
+    public ApiQueryService.CharacterView getCharacter(@PathVariable String name) {
+        return queries.findCharacter(name).orElseThrow();
+    }
+
+    @GetMapping("/{name}/names")
+    public List<ApiQueryService.CharacterNameView> getCharacterNames(@PathVariable String name) {
+        return queries.findCharacterNames(name);
+    }
+
+    @GetMapping("/{name}/highscores")
+    public List<ApiQueryService.HighscoreView> getCharacterHighscores(
+            @PathVariable String name,
+            @RequestParam(required = false) StatCategory category,
+            @RequestParam(required = false) String world,
+            @RequestParam(required = false) Integer vocationFilterId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "100") int limit
+    ) {
+        return queries.findCharacterHighscores(name, category, world, vocationFilterId, from, to, limit);
     }
 }

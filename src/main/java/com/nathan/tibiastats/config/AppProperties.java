@@ -17,9 +17,34 @@ public class AppProperties {
     }
 
     public static class Highscores {
+        private boolean enabled = true;
         private String cron = "0 0 7 * * *";
+        private String categories = "EXPERIENCE";
+        private String vocations = "0";
+        private int maxPages = 1;
+        private long pageDelayMs = 1000L;
+        private int worldLimit = 0;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
         public String getCron(){return cron;}
         public void setCron(String c){this.cron=c;}
+
+        public String getCategories() { return categories; }
+        public void setCategories(String categories) { this.categories = categories; }
+
+        public String getVocations() { return vocations; }
+        public void setVocations(String vocations) { this.vocations = vocations; }
+
+        public int getMaxPages() { return maxPages; }
+        public void setMaxPages(int maxPages) { this.maxPages = maxPages; }
+
+        public long getPageDelayMs() { return pageDelayMs; }
+        public void setPageDelayMs(long pageDelayMs) { this.pageDelayMs = pageDelayMs; }
+
+        public int getWorldLimit() { return worldLimit; }
+        public void setWorldLimit(int worldLimit) { this.worldLimit = worldLimit; }
     }
 
     public static class CharacterDetails {

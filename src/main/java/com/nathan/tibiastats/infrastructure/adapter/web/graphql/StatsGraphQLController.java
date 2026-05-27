@@ -1,17 +1,19 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.graphql;
 
 import com.nathan.tibiastats.application.service.AnalyticsService;
-import com.nathan.tibiastats.domain.model.CharacterName;
+import com.nathan.tibiastats.application.service.ApiQueryService;
 import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.StatCategory;
-import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
 import java.time.Instant;
-import java.util.*;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
@@ -19,14 +21,14 @@ public class StatsGraphQLController {
 
     private final AnalyticsService analytics;
     private final WorldRepositoryPort worlds;
-    private final CharacterRepositoryPort chars;
+    private final ApiQueryService queries;
 
-    public StatsGraphQLController(AnalyticsService a,
-                                  WorldRepositoryPort w,
-                                  CharacterRepositoryPort c) {
-        this.analytics = a;
-        this.worlds = w;
-        this.chars = c;
+    public StatsGraphQLController(AnalyticsService analytics,
+                                  WorldRepositoryPort worlds,
+                                  ApiQueryService queries) {
+        this.analytics = analytics;
+        this.worlds = worlds;
+        this.queries = queries;
     }
 
     @QueryMapping
@@ -82,30 +84,74 @@ public class StatsGraphQLController {
     }
 
     @QueryMapping
-    public Map<String, Object> character(@Argument String name) {
-        var c = chars.findByAnyName(name, CharacterName.inactiveHorizon()).orElseThrow();
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", c.getId());
-        m.put("name", name);
-        m.put("level", c.getLevel());
-        m.put("vocation", c.getVocation());
-        return m;
+    public List<ApiQueryService.WorldView> worlds() {
+        return queries.findWorlds();
     }
 
     @QueryMapping
-    public List<Map<String, Object>> characterStatHistory(
+    public ApiQueryService.WorldView world(@Argument String name) {
+        return queries.findWorld(name).orElse(null);
+    }
+
+    @QueryMapping
+    public ApiQueryService.CharacterView character(@Argument String name) {
+        return queries.findCharacter(name).orElse(null);
+    }
+
+    @QueryMapping
+    public List<ApiQueryService.CharacterNameView> characterNames(@Argument String name) {
+        return queries.findCharacterNames(name);
+    }
+
+    @QueryMapping
+    public List<ApiQueryService.HighscoreView> characterHighscores(
+            @Argument String name,
+            @Argument StatCategory category,
+            @Argument String world,
+            @Argument Integer vocationFilterId,
+            @Argument String from,
+            @Argument String to,
+            @Argument Integer limit) {
+        return queries.findCharacterHighscores(
+                name,
+                category,
+                world,
+                vocationFilterId,
+                from == null ? null : LocalDate.parse(from),
+                to == null ? null : LocalDate.parse(to),
+                limit == null ? 100 : limit
+        );
+    }
+
+    @QueryMapping
+    public List<ApiQueryService.HighscoreView> highscores(
+            @Argument String world,
+            @Argument StatCategory category,
+            @Argument Integer vocationFilterId,
+            @Argument String date,
+            @Argument Integer limit) {
+        return queries.findHighscores(
+                world,
+                category,
+                vocationFilterId,
+                date == null ? null : LocalDate.parse(date),
+                limit == null ? 100 : limit
+        );
+    }
+
+    @QueryMapping
+    public List<ApiQueryService.ScrapeJobView> scrapeJobs(
+            @Argument String jobName,
+            @Argument String status,
+            @Argument Integer limit) {
+        return queries.findScrapeJobs(jobName, status, limit == null ? 50 : limit);
+    }
+
+    /** Legacy query kept for compatibility with the previous schema. */
+    @QueryMapping
+    public List<ApiQueryService.HighscoreView> characterStatHistory(
             @Argument String name,
             @Argument StatCategory category) {
-        var c = chars.findByAnyName(name, CharacterName.inactiveHorizon()).orElseThrow();
-        return chars.findStatsBy(c, category).stream()
-                .map(r -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("date", r.getDate().toString());
-                    m.put("value", r.getValue());
-                    m.put("rank", r.getRank());
-                    m.put("world", r.getWorld().getName());
-                    return m;
-                })
-                .collect(Collectors.toList());
+        return queries.findCharacterHighscores(name, category, null, null, null, null, 100);
     }
 }
