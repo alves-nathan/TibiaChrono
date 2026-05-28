@@ -1,6 +1,8 @@
 package com.nathan.tibiastats.application.scheduler;
 
 import com.nathan.tibiastats.application.service.HighscoreService;
+import com.nathan.tibiastats.application.service.ScrapeJobResult;
+import com.nathan.tibiastats.application.service.ScrapeJobService;
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -21,10 +23,14 @@ public class HighscoreScrapeScheduler implements SchedulingConfigurer {
 
     private final HighscoreService service;
     private final HighscoreScrapeProperties properties;
+    private final ScrapeJobService scrapeJobService;
 
-    public HighscoreScrapeScheduler(HighscoreService service, HighscoreScrapeProperties properties) {
+    public HighscoreScrapeScheduler(HighscoreService service,
+                                    HighscoreScrapeProperties properties,
+                                    ScrapeJobService scrapeJobService) {
         this.service = service;
         this.properties = properties;
+        this.scrapeJobService = scrapeJobService;
     }
 
     @PostConstruct
@@ -107,7 +113,14 @@ public class HighscoreScrapeScheduler implements SchedulingConfigurer {
             return;
         }
 
-        log.info("[HIGHSCORE_SCRAPER] Plan tick started: plan={}, trigger={}", planName, trigger);
-        service.updateHighscores(planName, plan);
+        Long jobId = scrapeJobService.start(ScrapeJobService.HIGHSCORE_SCRAPER);
+        log.info("[HIGHSCORE_SCRAPER] Plan tick started: plan={}, trigger={}, jobId={}", planName, trigger, jobId);
+        try {
+            ScrapeJobResult result = service.updateHighscores(planName, plan);
+            scrapeJobService.finishSuccess(jobId, result);
+        } catch (Exception ex) {
+            scrapeJobService.finishFailure(jobId, ScrapeJobResult.empty(), ex);
+            throw ex;
+        }
     }
 }

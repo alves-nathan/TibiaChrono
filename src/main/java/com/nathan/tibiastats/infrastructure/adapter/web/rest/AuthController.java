@@ -58,7 +58,7 @@ public class AuthController {
         var acc = new UserAccount();
         acc.setUsername(req.username());
         acc.setPassword(encoder.encode(req.password()));
-        acc.setRoles((req.roles() == null || req.roles().isBlank()) ? "USER" : req.roles());
+        acc.setRoles("USER");
         users.save(acc);
 
         return ResponseEntity.ok().build();
@@ -70,7 +70,10 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(req.username(), req.password())
         );
 
-        String access = jwt.generateAccessToken(auth.getName());
+        UserAccount user = users.findByUsername(auth.getName())
+                .orElseThrow(() -> new IllegalStateException("authenticated user not found"));
+
+        String access = jwt.generateAccessToken(auth.getName(), user.getRoles());
         String refresh = tokens.issueRefreshToken(auth.getName());
 
         return ResponseEntity.ok(new AuthResponse(access, refresh));
@@ -106,7 +109,7 @@ public class AuthController {
 
         tokens.revokeRefreshToken(req.refreshToken());
         String newRefresh = tokens.issueRefreshToken(user.getUsername());
-        String newAccess = jwt.generateAccessToken(user.getUsername());
+        String newAccess = jwt.generateAccessToken(user.getUsername(), user.getRoles());
 
         return ResponseEntity.ok(new AuthResponse(newAccess, newRefresh));
     }

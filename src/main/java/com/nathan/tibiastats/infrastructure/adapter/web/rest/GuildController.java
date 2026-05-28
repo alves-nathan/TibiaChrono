@@ -66,15 +66,6 @@ public class GuildController {
         }
     }
 
-    @GetMapping("/api/characters/{name}/guild-history")
-    public List<GuildQueryService.GuildMemberView> getCharacterGuildHistory(@PathVariable String name) {
-        try {
-            return guilds.findCharacterGuildHistory(name);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
-        }
-    }
-
     @PostMapping("/api/scrape/guilds/worlds/{world}")
     public GuildScrapeService.GuildListResult scrapeGuildList(@PathVariable String world) {
         return scraper.updateGuildListForWorld(world);

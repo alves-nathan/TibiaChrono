@@ -499,7 +499,7 @@ tibiastats:
           page-delay-ms: 0
           world-limit: 0
           scopes-per-run: 0
-          parallelism: 4
+          parallelism: 1
           page-window-size: 1
           request-parallelism: 1
           request-max-attempts: 1

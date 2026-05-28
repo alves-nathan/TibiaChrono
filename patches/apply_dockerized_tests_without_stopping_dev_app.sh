@@ -1,6 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(pwd)"
+PATCH_NAME="dockerized-tests-without-stopping-dev-app"
+STAMP="$(date +%Y%m%d%H%M%S)"
+
+if [ ! -f "pom.xml" ] || [ ! -f "docker-compose.test.yml" ]; then
+  echo "ERROR: run this patch from the TibiaChrono project root." >&2
+  exit 1
+fi
+
+backup_file() {
+  local file="$1"
+  if [ -f "$file" ] && [ ! -f "$file.bak.$STAMP" ]; then
+    cp "$file" "$file.bak.$STAMP"
+  fi
+}
+
+backup_file "run-tests.sh"
+backup_file "Makefile"
+backup_file ".gitignore"
+
+cat > run-tests.sh <<'RUN_TESTS_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
 COMPOSE_FILE="${TEST_COMPOSE_FILE:-docker-compose.test.yml}"
 TEST_PROJECT_NAME="${TEST_PROJECT_NAME:-tibiachrono-test}"
 DB_SERVICE="${TEST_DB_SERVICE:-db-test}"
@@ -9,7 +33,6 @@ MAVEN_IMAGE="${TEST_MAVEN_IMAGE:-maven:3.9.9-eclipse-temurin-21}"
 TEST_WORK_DIR="${TEST_WORK_DIR:-.test-maven}"
 TEST_NETWORK="${TEST_NETWORK:-${TEST_PROJECT_NAME}_default}"
 MAVEN_ARGS="${MAVEN_ARGS:--U clean test}"
-TEST_RUNNER_CONTAINER="${TEST_RUNNER_CONTAINER:-tibiachrono-maven-test-runner}"
 
 compose_test() {
   docker compose -p "$TEST_PROJECT_NAME" -f "$COMPOSE_FILE" "$@"
@@ -18,7 +41,7 @@ compose_test() {
 usage() {
   cat <<'EOF_USAGE'
 Usage:
-  ./run-tests.sh           Start isolated test DB and run tests inside a copied Maven Docker workspace
+  ./run-tests.sh           Start isolated test DB and run tests inside a Maven Docker container
   ./run-tests.sh run       Same as above
   ./run-tests.sh test      Same as above
   ./run-tests.sh host      Run tests with host Maven against localhost:5433 (touches ./target)
@@ -29,10 +52,8 @@ Usage:
 Default behavior:
   - Does NOT stop the dev app container.
   - Does NOT use host Maven.
-  - Does NOT clean or write the project ./target directory.
-  - Copies the source tree to .test-maven/workspace and runs Maven there.
-  - Test reports/classes are written under .test-maven/workspace/target.
-  - Maven dependencies are cached under .test-maven/m2.
+  - Does NOT clean or write the host ./target directory.
+  - Uses .test-maven/target and .test-maven/m2 as local isolated test workspace.
 
 Useful env overrides:
   TEST_MAVEN_IMAGE=maven:3.9.9-eclipse-temurin-21
@@ -47,23 +68,6 @@ ensure_docker() {
     echo "Install/start Docker, or run './run-tests.sh host' if Maven is available on the host." >&2
     exit 1
   fi
-}
-
-validate_test_work_dir() {
-  case "$TEST_WORK_DIR" in
-    ""|"/"|".")
-      echo "ERROR: unsafe TEST_WORK_DIR: '$TEST_WORK_DIR'" >&2
-      exit 1
-      ;;
-    /*)
-      echo "ERROR: TEST_WORK_DIR must be a relative path, got: '$TEST_WORK_DIR'" >&2
-      exit 1
-      ;;
-    *..*)
-      echo "ERROR: TEST_WORK_DIR must not contain '..', got: '$TEST_WORK_DIR'" >&2
-      exit 1
-      ;;
-  esac
 }
 
 start_test_db() {
@@ -83,76 +87,35 @@ start_test_db() {
   done
 }
 
-repair_test_workspace_permissions() {
-  if [ ! -e "$TEST_WORK_DIR" ]; then
-    return 0
-  fi
-
-  chmod -R u+rwX "$TEST_WORK_DIR" 2>/dev/null || true
-
-  if find "$TEST_WORK_DIR" ! -user "$(id -u)" -print -quit 2>/dev/null | grep -q .; then
-    docker run --rm \
-      -v "$PWD:/repo" \
-      -w /repo \
-      "$MAVEN_IMAGE" \
-      sh -c "chown -R $(id -u):$(id -g) '$TEST_WORK_DIR' 2>/dev/null || true" \
-      >/dev/null 2>&1 || true
-  fi
-
-  chmod -R u+rwX "$TEST_WORK_DIR" 2>/dev/null || true
-}
-
 prepare_dockerized_workspace() {
-  validate_test_work_dir
-  repair_test_workspace_permissions
-
-  local workspace_dir="$TEST_WORK_DIR/workspace"
-  local m2_dir="$TEST_WORK_DIR/m2"
-
-  rm -rf "$workspace_dir"
-  mkdir -p "$workspace_dir" "$m2_dir"
-
-  echo "Copying project to isolated test workspace: $workspace_dir"
-  tar \
-    --exclude='./target' \
-    --exclude="./$TEST_WORK_DIR" \
-    --exclude='./.git' \
-    --exclude='./.idea' \
-    --exclude='./*.log' \
-    -cf - . | tar -xf - -C "$workspace_dir"
+  mkdir -p "$TEST_WORK_DIR/target" "$TEST_WORK_DIR/m2" "$TEST_WORK_DIR/home"
+  chmod -R u+rwX "$TEST_WORK_DIR" 2>/dev/null || true
 }
 
 run_tests_in_maven_container() {
   prepare_dockerized_workspace
 
-  local workspace_dir="$PWD/$TEST_WORK_DIR/workspace"
-  local m2_dir="$PWD/$TEST_WORK_DIR/m2"
-
   echo "Running tests in isolated Maven container. Dev app will keep running if it is up."
-  echo "Project ./target will not be touched."
-  echo "Maven reports/classes will be written under: $TEST_WORK_DIR/workspace/target"
+  echo "Maven reports/classes will be written under: $TEST_WORK_DIR/target"
 
-  docker rm -f "$TEST_RUNNER_CONTAINER" >/dev/null 2>&1 || true
-
-  set +e
   # shellcheck disable=SC2086
   docker run --rm \
-    --name "$TEST_RUNNER_CONTAINER" \
+    --name "${TEST_RUNNER_CONTAINER:-tibiachrono-maven-test-runner}" \
     --network "$TEST_NETWORK" \
+    --user "$(id -u):$(id -g)" \
     -e SPRING_PROFILES_ACTIVE=test \
     -e TEST_DB_URL="${TEST_DB_URL:-jdbc:postgresql://${DB_SERVICE}:5432/tibiastats_test}" \
     -e TEST_DB_USERNAME="${TEST_DB_USERNAME:-tibia}" \
     -e TEST_DB_PASSWORD="${TEST_DB_PASSWORD:-secret}" \
-    -v "$workspace_dir:/workspace" \
-    -v "$m2_dir:/root/.m2" \
+    -e MAVEN_CONFIG="/workspace/${TEST_WORK_DIR}/home/.m2" \
+    -v "$PWD:/workspace" \
+    -v "$PWD/${TEST_WORK_DIR}/target:/workspace/target" \
+    -v "$PWD/${TEST_WORK_DIR}/m2:/workspace/${TEST_WORK_DIR}/home/.m2/repository" \
     -w /workspace \
     "$MAVEN_IMAGE" \
-    mvn $MAVEN_ARGS
-  local status=$?
-  set -e
-
-  repair_test_workspace_permissions
-  return "$status"
+    mvn -Dmaven.repo.local="/workspace/${TEST_WORK_DIR}/home/.m2/repository" \
+        -Duser.home="/workspace/${TEST_WORK_DIR}/home" \
+        $MAVEN_ARGS
 }
 
 prepare_target_permissions_for_host_maven() {
@@ -206,8 +169,6 @@ case "$cmd" in
   clean|down-clean)
     ensure_docker
     compose_test down -v --remove-orphans
-    validate_test_work_dir
-    repair_test_workspace_permissions
     rm -rf "$TEST_WORK_DIR"
     ;;
 
@@ -226,3 +187,82 @@ case "$cmd" in
     exit 2
     ;;
 esac
+RUN_TESTS_EOF
+chmod +x run-tests.sh
+
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+path = Path('Makefile')
+text = path.read_text()
+
+# Fix old invalid Makefile commands.
+text = text.replace('\trun ./run-tests.sh', '\t./run-tests.sh')
+
+# Normalize help lines so the patch is safe to re-run.
+text = re.sub(r'\n\t@echo "  make up-dev-verified[^\n]*"', '', text)
+text = re.sub(r'\n\t@echo "  make test-host[^\n]*"', '', text)
+text = re.sub(
+    r'\t@echo "  make up-dev\s+- [^\n]*"',
+    '\t@echo "  make up-dev        - build & start dev (hot-reload) compose"\n'
+    '\t@echo "  make up-dev-verified - run tests, then build & start dev compose"',
+    text,
+)
+text = re.sub(
+    r'\t@echo "  make test\s+- [^\n]*"',
+    '\t@echo "  make test          - run full test suite in isolated Maven container"\n'
+    '\t@echo "  make test-host     - run full test suite with host Maven"',
+    text,
+)
+
+# Remove any previous generated blocks, then insert one canonical block.
+up_dev_verified_block = (
+    '.PHONY: up-dev-verified\n'
+    'up-dev-verified: test\n'
+    '\tSPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY=$(JWT_SECRET) docker compose -f $(DEV_COMPOSE) up --build\n\n'
+)
+text = re.sub(
+    r'\n\.PHONY: up-dev-verified\nup-dev-verified: test\n\tSPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY=\$\(JWT_SECRET\) docker compose -f \$\(DEV_COMPOSE\) up --build\n',
+    '\n',
+    text,
+)
+text = text.replace('\n.PHONY: down-dev\n', '\n' + up_dev_verified_block + '.PHONY: down-dev\n')
+
+# Normalize test-host target.
+test_host_block = '.PHONY: test-host\ntest-host:\n\t./run-tests.sh host\n\n'
+text = re.sub(r'\n\.PHONY: test-host\ntest-host:\n\t\.\/run-tests\.sh host\n', '\n', text)
+text = text.replace('\n.PHONY: test-down\n', '\n' + test_host_block + '.PHONY: test-down\n')
+
+path.write_text(text)
+PY
+if ! grep -qxF '/.test-maven/' .gitignore; then
+  cat >> .gitignore <<'GITIGNORE_EOF'
+
+# Local workspace used by ./run-tests.sh dockerized Maven runner
+/.test-maven/
+GITIGNORE_EOF
+fi
+
+bash -n run-tests.sh
+
+cat <<'DONE'
+Patch applied successfully.
+
+What changed:
+- ./run-tests.sh now runs Maven tests inside an isolated Docker container by default.
+- The dev app is no longer stopped before tests.
+- Host ./target is no longer cleaned or written by the default test runner.
+- Test build output goes to .test-maven/target.
+- Maven cache goes to .test-maven/m2.
+- Makefile targets were fixed and test-host/up-dev-verified were added.
+
+Run:
+  ./run-tests.sh
+
+Optional:
+  make test
+  make test-host
+  make up-dev-verified
+  ./run-tests.sh clean
+DONE

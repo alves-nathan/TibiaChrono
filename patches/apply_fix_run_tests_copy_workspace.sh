@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+STAMP="$(date +%Y%m%d%H%M%S)"
+
+if [ ! -f "pom.xml" ] || [ ! -f "docker-compose.test.yml" ]; then
+  echo "ERROR: run this patch from the TibiaChrono project root." >&2
+  exit 1
+fi
+
+backup_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    cp "$file" "$file.bak.$STAMP"
+  fi
+}
+
+backup_file "run-tests.sh"
+backup_file "Makefile"
+backup_file ".gitignore"
+
+cat > run-tests.sh <<'RUN_TESTS_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
 COMPOSE_FILE="${TEST_COMPOSE_FILE:-docker-compose.test.yml}"
 TEST_PROJECT_NAME="${TEST_PROJECT_NAME:-tibiachrono-test}"
 DB_SERVICE="${TEST_DB_SERVICE:-db-test}"
@@ -226,3 +248,88 @@ case "$cmd" in
     exit 2
     ;;
 esac
+RUN_TESTS_EOF
+chmod +x run-tests.sh
+
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+path = Path('Makefile')
+text = path.read_text()
+
+# Fix old invalid Makefile commands and keep the patch idempotent.
+text = text.replace('\trun ./run-tests.sh', '\t./run-tests.sh')
+
+# Normalize help lines.
+text = re.sub(r'\n\t@echo "  make up-dev-verified[^\n]*"', '', text)
+text = re.sub(r'\n\t@echo "  make test-host[^\n]*"', '', text)
+text = re.sub(
+    r'\t@echo "  make up-dev\s+- [^\n]*"',
+    '\t@echo "  make up-dev        - build & start dev (hot-reload) compose"\n'
+    '\t@echo "  make up-dev-verified - run tests, then build & start dev compose"',
+    text,
+)
+text = re.sub(
+    r'\t@echo "  make test\s+- [^\n]*"',
+    '\t@echo "  make test          - run full test suite in isolated copied Maven workspace"\n'
+    '\t@echo "  make test-host     - run full test suite with host Maven"',
+    text,
+)
+
+# Remove any previous generated target blocks.
+text = re.sub(
+    r'\n\.PHONY: up-dev-verified\nup-dev-verified: test\n\tSPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY=\$\(JWT_SECRET\) docker compose -f \$\(DEV_COMPOSE\) up --build\n',
+    '\n',
+    text,
+)
+text = re.sub(r'\n\.PHONY: test-host\ntest-host:\n\t\.\/run-tests\.sh host\n', '\n', text)
+
+up_dev_verified_block = (
+    '.PHONY: up-dev-verified\n'
+    'up-dev-verified: test\n'
+    '\tSPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY=$(JWT_SECRET) docker compose -f $(DEV_COMPOSE) up --build\n\n'
+)
+if '.PHONY: down-dev' in text:
+    text = text.replace('\n.PHONY: down-dev\n', '\n' + up_dev_verified_block + '.PHONY: down-dev\n')
+
+test_host_block = '.PHONY: test-host\ntest-host:\n\t./run-tests.sh host\n\n'
+if '.PHONY: test-down' in text:
+    text = text.replace('\n.PHONY: test-down\n', '\n' + test_host_block + '.PHONY: test-down\n')
+
+path.write_text(text)
+PY
+
+if [ ! -f .gitignore ]; then
+  touch .gitignore
+fi
+
+if ! grep -qxF '/.test-maven/' .gitignore; then
+  cat >> .gitignore <<'GITIGNORE_EOF'
+
+# Local workspace used by ./run-tests.sh dockerized Maven runner
+/.test-maven/
+GITIGNORE_EOF
+fi
+
+bash -n run-tests.sh
+make -n test >/dev/null
+
+cat <<'DONE'
+Patch applied successfully.
+
+What changed:
+- ./run-tests.sh now copies the project to .test-maven/workspace before running Maven.
+- Maven clean now deletes .test-maven/workspace/target, not the real project ./target.
+- The dev app is not stopped before tests.
+- Maven cache is isolated under .test-maven/m2.
+- Makefile test commands were normalized.
+
+Run:
+  make test
+
+Optional:
+  ./run-tests.sh clean
+  ./run-tests.sh host
+  make up-dev-verified
+DONE

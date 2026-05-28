@@ -11,7 +11,12 @@ public class AppProperties {
     private CharacterDetails characterDetails = new CharacterDetails();
 
     public static class Worlds {
+        private boolean enabled = true;
         private long rateMs = 60000L;
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
         public long getRateMs(){return rateMs;}
         public void setRateMs(long v){this.rateMs=v;}
     }

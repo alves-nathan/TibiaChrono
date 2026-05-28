@@ -10,7 +10,7 @@ spring:
           secret-key: "please-change-me-to-a-very-long-random-secret"
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
@@ -21,7 +21,7 @@ spring:
         size: 4
 
   graphql:
-    path: /graphql.
+    path: /graphql
 
 server:
   port: 8080

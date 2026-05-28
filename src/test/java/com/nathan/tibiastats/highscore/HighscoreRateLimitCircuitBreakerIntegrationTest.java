@@ -33,6 +33,7 @@ class HighscoreRateLimitCircuitBreakerIntegrationTest extends AbstractPostgresTe
     void cleanDatabase() {
         jdbc.execute("""
             truncate table
+                highscore_http_backoff_state,
                 highscore_exp_rank_daily,
                 highscore_exp_daily,
                 highscore_record_periods,

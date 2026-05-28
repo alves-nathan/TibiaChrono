@@ -1,3 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TEST_FILE="src/test/java/com/nathan/tibiastats/auth/AuthIntegrationTest.java"
+
+if [ ! -f "pom.xml" ] || [ ! -d "src/test/java/com/nathan/tibiastats" ]; then
+  echo "ERROR: run this script from the TibiaChrono project root." >&2
+  exit 1
+fi
+
+if [ ! -f "$TEST_FILE" ]; then
+  echo "ERROR: $TEST_FILE was not found." >&2
+  exit 1
+fi
+
+BACKUP_FILE="$TEST_FILE.bak.$(date +%Y%m%d%H%M%S)"
+cp "$TEST_FILE" "$BACKUP_FILE"
+
+cat > "$TEST_FILE" <<'JAVA'
 package com.nathan.tibiastats.auth;
 
 import com.jayway.jsonpath.JsonPath;
@@ -59,3 +78,27 @@ class AuthIntegrationTest extends AbstractPostgresTest {
                 .andExpect(status().isOk());
     }
 }
+JAVA
+
+python3 - <<'PY'
+from pathlib import Path
+text = Path('src/test/java/com/nathan/tibiastats/auth/AuthIntegrationTest.java').read_text()
+required = [
+    'content("""',
+    '{"username":"tester","password":"secret"}',
+    '{"refreshToken":"%s"}',
+    '.formatted(refresh)',
+]
+missing = [item for item in required if item not in text]
+if missing:
+    raise SystemExit('ERROR: AuthIntegrationTest rewrite verification failed. Missing: ' + ', '.join(missing))
+print('AuthIntegrationTest rewritten with Java text block JSON payloads.')
+PY
+
+cat <<EOF
+Patch applied successfully.
+Backup created at: $BACKUP_FILE
+
+Next steps:
+  make test
+EOF

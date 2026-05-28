@@ -199,3 +199,14 @@ README.html
 *.iml
 .idea
 .exercism
+
+# Local workspace used by ./run-tests.sh dockerized Maven runner
+/.test-maven/
+
+### TibiaChrono local/generated artifacts ###
+/.idea/
+patches/.backups/
+*.bak-*
+*.bak.*
+*Zone.Identifier*
+TibiaChrono-clean.zip

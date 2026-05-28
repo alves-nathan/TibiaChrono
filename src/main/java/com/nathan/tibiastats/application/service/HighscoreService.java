@@ -70,38 +70,53 @@ public class HighscoreService {
         this.statRecordWriter = statRecordWriter;
     }
 
-    public void updateAllHighscores() {
-        updateHighscores("default", properties.toLegacyPlan());
+    public ScrapeJobResult updateAllHighscores() {
+        return updateHighscores("default", properties.toLegacyPlan());
     }
 
-    public void updateHighscores(String planName, HighscoreScrapeProperties.Plan plan) {
+    public ScrapeJobResult updateHighscores(String planName, HighscoreScrapeProperties.Plan plan) {
         if (!properties.isEnabled()) {
             log.info("[HIGHSCORE_SCRAPER] Skipping run because highscores.enabled=false: plan={}", planName);
-            return;
+            return ScrapeJobResult.empty();
         }
         if (plan == null || !plan.isEnabled()) {
             log.info("[HIGHSCORE_SCRAPER] Skipping disabled highscore plan: plan={}", planName);
-            return;
+            return ScrapeJobResult.empty();
         }
 
         if (isHttpBackoffActive(planName)) {
-            return;
+            return ScrapeJobResult.empty();
         }
 
         if (!running.compareAndSet(false, true)) {
             log.warn("[HIGHSCORE_SCRAPER] Previous highscore run is still active. Skipping this tick: plan={}", planName);
-            return;
+            return ScrapeJobResult.empty();
         }
 
         Instant startedAt = Instant.now();
         try {
-            runIncrementalHighscoreScrape(startedAt, planName, plan);
+            return runIncrementalHighscoreScrape(startedAt, planName, plan);
         } finally {
             running.set(false);
         }
     }
 
-    private void runIncrementalHighscoreScrape(Instant startedAt, String planName, HighscoreScrapeProperties.Plan plan) {
+    public HighscoreScrapeStateRepository.HighscoreHttpBackoffState getHttpBackoffState() {
+        return stateRepository.getHttpBackoffState();
+    }
+
+    public HighscoreScrapeStateRepository.HighscoreHttpBackoffState resetHttpBackoffManually() {
+        stateRepository.resetHttpBackoffAfterSuccess();
+        globalHttpCooldownUntilMs.set(0);
+        lastCooldownLogAtMs.set(0);
+        return stateRepository.getHttpBackoffState();
+    }
+
+    public boolean isRunning() {
+        return running.get();
+    }
+
+    private ScrapeJobResult runIncrementalHighscoreScrape(Instant startedAt, String planName, HighscoreScrapeProperties.Plan plan) {
         List<World> worlds = worldRepository.findAll().stream()
                 .sorted(Comparator.comparing(World::getName, String.CASE_INSENSITIVE_ORDER))
                 .limit(plan.getWorldLimit() > 0 ? plan.getWorldLimit() : Long.MAX_VALUE)
@@ -111,7 +126,7 @@ public class HighscoreService {
 
         if (worlds.isEmpty()) {
             log.warn("[HIGHSCORE_SCRAPER] No worlds found. Run the world scraper first.");
-            return;
+            return ScrapeJobResult.empty();
         }
 
         stateRepository.registerScopes(worlds, categories, vocationFilterIds);
@@ -124,7 +139,7 @@ public class HighscoreService {
 
         if (scopes.isEmpty()) {
             log.info("[HIGHSCORE_SCRAPER] No eligible highscore scopes found.");
-            return;
+            return ScrapeJobResult.empty();
         }
 
         log.info(
@@ -223,6 +238,7 @@ public class HighscoreService {
                     characterIdCache.size(),
                     rateLimited.get()
             );
+            return ScrapeJobResult.of(success + empty + failed, 0, totalRows, failed);
         }
     }
 

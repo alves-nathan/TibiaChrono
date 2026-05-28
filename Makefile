@@ -21,10 +21,13 @@ help:
 	@echo "  make logs          - tail prod-like app logs"
 	@echo "  make rebuild       - rebuild prod-like app image"
 	@echo "  make up-dev        - build & start dev (hot-reload) compose"
+	@echo "  make up-dev-verified - run tests, then build & start dev compose"
 	@echo "  make down-dev      - stop dev compose (keep volumes)"
 	@echo "  make down-dev-clean - stop dev compose and remove volumes"
 	@echo "  make logs-dev      - tail dev app logs"
-	@echo "  make test          - run full test suite using isolated test database"
+	@echo "  make test          - run full test suite in isolated copied Maven workspace"
+	@echo "  make test-coverage - run tests and open JaCoCo HTML coverage report"
+	@echo "  make test-host     - run full test suite with host Maven"
 	@echo "  make test-dev      - run Maven tests INSIDE dev container"
 	@echo "  make test-down     - stop test database container/network"
 	@echo "  make test-clean    - stop test database and remove anonymous volumes"
@@ -33,6 +36,13 @@ help:
 	@echo "  make clean-vol     - remove named volumes (DB data)"
 	@echo "  make jwt-secret    - generate a long random JWT secret"
 	@echo "  make env-print     - show important env vars"
+	@echo "  make qa            - run full quality gate: tests, ArchUnit and JaCoCo check"
+	@echo "  make arch-test     - run architecture fitness tests only"
+	@echo "  make format        - apply Java formatter via Spotless"
+	@echo "  make format-check  - verify Java formatting via Spotless"
+	@echo "  make audit-worktree - list local/generated artifacts that should not be committed"
+	@echo "  make clean-local-artifacts - remove local/generated artifacts from the working tree"
+	@echo "  make export-clean   - create a clean ZIP export without local artifacts"
 
 # ---- Prod-like ----
 .PHONY: up
@@ -60,6 +70,11 @@ rebuild:
 up-dev:
 	SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY=$(JWT_SECRET) docker compose -f $(DEV_COMPOSE) up --build
 
+
+.PHONY: up-dev-verified
+up-dev-verified: test
+	SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY=$(JWT_SECRET) docker compose -f $(DEV_COMPOSE) up --build
+
 .PHONY: down-dev
 down-dev:
 	docker compose -f $(DEV_COMPOSE) down
@@ -75,19 +90,40 @@ logs-dev:
 # ---- Tests ----
 .PHONY: test
 test:
-	run ./run-tests.sh
+	./run-tests.sh
+
+
+
+.PHONY: test-coverage
+test-coverage:
+	MAVEN_ARGS="-U clean jacoco:prepare-agent test jacoco:report" ./run-tests.sh
+	@report="$(PWD)/.test-maven/workspace/target/site/jacoco/index.html"; \
+	echo "JaCoCo coverage report: $$report"; \
+	if command -v wslview >/dev/null 2>&1; then \
+	  wslview "$$report"; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+	  xdg-open "$$report" >/dev/null 2>&1 || true; \
+	elif command -v explorer.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then \
+	  explorer.exe "$$(wslpath -w "$$report")"; \
+	else \
+	  echo "Open the file above in your browser."; \
+	fi
+
+.PHONY: test-host
+test-host:
+	./run-tests.sh host
 
 .PHONY: test-down
 test-down:
-	run ./run-tests.sh down
+	./run-tests.sh down
 
 .PHONY: test-clean
 test-clean:
-	run ./run-tests.sh clean
+	./run-tests.sh clean
 
 .PHONY: test-logs
 test-logs:
-	run ./run-tests.sh logs
+	./run-tests.sh logs
 
 .PHONY: test-dev
 test-dev:
@@ -117,3 +153,47 @@ jwt-secret:
 .PHONY: env-print
 env-print:
 	@echo "JWT_SECRET=$(JWT_SECRET)"
+
+
+# ---- Repository hygiene ----
+.PHONY: audit-worktree
+audit-worktree:
+	@echo "Local/generated artifacts currently present:"; \
+	find . \
+	  -path './.git' -prune -o \
+	  -path './.idea' -print -prune -o \
+	  -path './.test-maven' -print -prune -o \
+	  -path './target' -print -prune -o \
+	  -path './patches/.backups' -print -prune -o \
+	  \( -name '*.bak' -o -name '*.bak-*' -o -name '*.bak.*' -o -name '*Zone.Identifier*' \) -print | sort
+
+.PHONY: clean-local-artifacts
+clean-local-artifacts:
+	@echo "Removing local/generated artifacts..."; \
+	rm -rf .idea .test-maven target patches/.backups; \
+	find . \
+	  -path './.git' -prune -o \
+	  \( -name '*.bak' -o -name '*.bak-*' -o -name '*.bak.*' -o -name '*Zone.Identifier*' \) -type f -print0 | xargs -0 -r rm -f; \
+	echo "Done."
+
+.PHONY: export-clean
+export-clean:
+	./scripts/export-clean.sh
+
+
+# ---- Quality gates ----
+.PHONY: qa
+qa:
+	MAVEN_ARGS="-U clean verify" ./run-tests.sh
+
+.PHONY: arch-test
+arch-test:
+	MAVEN_ARGS="-U -Dtest=ArchitectureRulesTest test" ./run-tests.sh
+
+.PHONY: format
+format:
+	MAVEN_ARGS="-U spotless:apply" ./run-tests.sh
+
+.PHONY: format-check
+format-check:
+	MAVEN_ARGS="-U spotless:check" ./run-tests.sh
