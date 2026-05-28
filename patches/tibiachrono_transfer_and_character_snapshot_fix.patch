@@ -1,0 +1,431 @@
+--- a/src/main/java/com/nathan/tibiastats/domain/port/ScrapePort.java	2026-04-25 00:57:04.000000000 +0000
++++ b/src/main/java/com/nathan/tibiastats/domain/port/ScrapePort.java	2026-05-26 12:35:08.091252917 +0000
+@@ -6,16 +6,23 @@
+ import java.util.List;
+ 
+ public interface ScrapePort {
+-    record WorldSummary(String name, String pvptype, String location, int playersOnline) {}
++    record WorldSummary(String name, String pvptype, String location, int playersOnline, String transferType) {}
++
++    record OnlineCharacter(String name, Integer level, String vocation) {}
++
+     record WorldOnline(
+             String world,
+             int playersOnline,
+-            List<String> playerNames,
++            List<OnlineCharacter> players,
+             String onlineRecord,
+             LocalDate creationDate,
+             String transferType,
+             String gameWorldType
+-    ) {}
++    ) {
++        public List<String> playerNames() {
++            return players.stream().map(OnlineCharacter::name).toList();
++        }
++    }
+ 
+     List<WorldSummary> fetchWorldsOverview();
+     WorldOnline fetchWorldPage(String worldName, World world);
+--- a/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java	2026-05-26 12:12:52.000000000 +0000
++++ b/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java	2026-05-26 12:36:05.962421743 +0000
+@@ -2,16 +2,23 @@
+ 
+ import com.nathan.tibiastats.domain.model.World;
+ import com.nathan.tibiastats.domain.port.ScrapePort;
+-import org.jsoup.Jsoup; import org.jsoup.nodes.Document; import org.jsoup.nodes.Element; import org.jsoup.select.Elements;
++import org.jsoup.Jsoup;
++import org.jsoup.nodes.Document;
++import org.jsoup.nodes.Element;
++import org.jsoup.select.Elements;
+ import org.springframework.stereotype.Component;
+ 
++import java.io.IOException;
+ import java.net.URLEncoder;
+ import java.nio.charset.StandardCharsets;
+ import java.time.LocalDate;
+ import java.time.format.DateTimeFormatter;
+ import java.time.format.DateTimeFormatterBuilder;
+ import java.time.temporal.ChronoField;
+-import java.util.*; import java.io.IOException;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Locale;
++import java.util.Objects;
+ 
+ @Component
+ public class JsoupScrapeAdapter implements ScrapePort {
+@@ -34,9 +41,14 @@
+                 String name = tds.get(0).text().trim();
+                 int online = parseIntSafe(tds.get(1).text().trim());
+                 String location = tds.get(2).text().trim();
+-                String pvp = tds.get(3).text();
++                String pvp = tds.get(3).text().trim();
++
++                // The worlds overview table contains extra columns after PvP Type.
++                // In the current Tibia layout, Transfer Type is the last column.
++                String transferType = tds.size() >= 7 ? readCellValue(tds.get(6)) : null;
++
+                 if (!name.isBlank() && !name.equalsIgnoreCase("World")) {
+-                    out.add(new WorldSummary(name, pvp, location, online));
++                    out.add(new WorldSummary(name, pvp, location, online, blankToNull(transferType)));
+                 }
+             }
+             return out;
+@@ -52,49 +64,51 @@
+                     .timeout(TIMEOUT_MS)
+                     .get();
+             int online = 0;
+-            List<String> players = new ArrayList<>();
++            List<OnlineCharacter> players = new ArrayList<>();
+ 
+             Elements rowsT1 = doc.select("table.Table1 div.InnerTableContainer tbody tr");
+             for (Element tr : rowsT1){
+-                if(tr.text().contains("Players Online:")) {
+-                    online = Integer.parseInt(Objects.requireNonNull(tr.lastElementChild()).text());
++                String rowText = tr.text();
++                Element valueCell = tr.lastElementChild();
++                if (valueCell == null) {
++                    continue;
++                }
++
++                if(rowText.contains("Players Online:")) {
++                    online = parseIntSafe(valueCell.text());
+                     continue;
+                 }
+-                if(tr.text().contains("Creation Date:")) {
++                if(rowText.contains("Creation Date:")) {
+                     if(world.getCreationDate() == null){
+                         DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                                 .appendPattern("MMMM uuuu")
+-                                .parseDefaulting(ChronoField.DAY_OF_MONTH, 1) // dia padrão = 1
++                                .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
+                                 .toFormatter(Locale.ENGLISH);
+-                        world.setCreationDate(
+-                                LocalDate.parse(Objects.requireNonNull(tr.lastElementChild()).text(), formatter)
+-                        );
++                        world.setCreationDate(LocalDate.parse(valueCell.text().trim(), formatter));
+                         continue;
+                     }
+                 }
+-                if(tr.text().contains("Online Record:")) {
++                if(rowText.contains("Online Record:")) {
+                     if(world.getOnlineRecord() == null){
+-                        world.setOnlineRecord(Objects.requireNonNull(tr.lastElementChild()).text());
++                        world.setOnlineRecord(valueCell.text().trim());
+                         continue;
+                     }
+                 }
+-                if(tr.text().contains("PvP Type:")) {
++                if(rowText.contains("PvP Type:")) {
+                     if(world.getPvpType() == null){
+-                        world.setPvpType(Objects.requireNonNull(tr.lastElementChild()).text());
++                        world.setPvpType(valueCell.text().trim());
+                         continue;
+                     }
+                 }
+-                if(tr.text().contains("Transfer Type:")) {
+-                    world.setTransferType(Objects.requireNonNull(tr.lastElementChild()).text().trim());
++                if(rowText.contains("Transfer Type:") || rowText.contains("World Transfer Type:")) {
++                    world.setTransferType(valueCell.text().trim());
+                     continue;
+                 }
+-                if(tr.text().contains("Game World Type:")) {
+-                    world.setGameWorldType(Objects.requireNonNull(tr.lastElementChild()).text().trim());
++                if(rowText.contains("Game World Type:")) {
++                    world.setGameWorldType(valueCell.text().trim());
+                 }
+             }
+ 
+-
+-
+             Elements rowsT2 = doc.select("table.Table2 div.InnerTableContainer tr");
+             for (Element tr : rowsT2){
+                 String rowText = tr.text();
+@@ -102,10 +116,25 @@
+                     continue;
+                 }
+ 
+-                String nameTd = tr.select("td > a[href*=?name=]").text().trim();
+-                if (!nameTd.isBlank()) {
+-                    players.add(nameTd);
++                Elements tds = tr.select("td");
++                Element nameLink = tr.selectFirst("td > a[href*=?name=]");
++                if (nameLink == null) {
++                    continue;
++                }
++
++                String name = nameLink.text().trim();
++                if (name.isBlank()) {
++                    continue;
++                }
++
++                Integer level = null;
++                String vocation = null;
++                if (tds.size() >= 3) {
++                    level = parseNullableInt(tds.get(1).text());
++                    vocation = blankToNull(tds.get(2).text().trim());
+                 }
++
++                players.add(new OnlineCharacter(name, level, vocation));
+             }
+             return new WorldOnline(
+                     worldName,
+@@ -113,8 +142,8 @@
+                     players,
+                     world.getOnlineRecord(),
+                     world.getCreationDate(),
+-                    world.getTransferType(),
+-                    world.getGameWorldType()
++                    blankToNull(world.getTransferType()),
++                    blankToNull(world.getGameWorldType())
+             );
+         } catch (IOException e){ throw new RuntimeException(e); }
+     }
+@@ -140,9 +169,44 @@
+ 
+     private int parseIntSafe(String s){
+         try {
+-            return Integer.parseInt(s.replaceAll("[^0-9]",""));
++            return Integer.parseInt(s.replaceAll("[^0-9]", ""));
+         } catch(Exception e){
+             return 0;
+         }
+     }
+-}
+\ No newline at end of file
++
++    private Integer parseNullableInt(String s){
++        try {
++            String digits = s.replaceAll("[^0-9]", "");
++            return digits.isBlank() ? null : Integer.parseInt(digits);
++        } catch(Exception e){
++            return null;
++        }
++    }
++
++    private String readCellValue(Element cell) {
++        String text = cell.text().trim();
++        if (!text.isBlank()) {
++            return text;
++        }
++
++        Element image = cell.selectFirst("img[title], img[alt]");
++        if (image != null) {
++            String title = image.attr("title").trim();
++            if (!title.isBlank()) {
++                return title;
++            }
++
++            String alt = image.attr("alt").trim();
++            if (!alt.isBlank()) {
++                return alt;
++            }
++        }
++
++        return null;
++    }
++
++    private String blankToNull(String value) {
++        return value == null || value.isBlank() ? null : value.trim();
++    }
++}
+--- a/src/main/java/com/nathan/tibiastats/application/service/ScrapeService.java	2026-05-26 11:38:58.000000000 +0000
++++ b/src/main/java/com/nathan/tibiastats/application/service/ScrapeService.java	2026-05-26 12:35:08.120373729 +0000
+@@ -1,5 +1,6 @@
+ package com.nathan.tibiastats.application.service;
+ 
++import com.nathan.tibiastats.domain.model.CharacterEntity;
+ import com.nathan.tibiastats.domain.model.Scrape;
+ import com.nathan.tibiastats.domain.model.ScrapePlayer;
+ import com.nathan.tibiastats.domain.model.World;
+@@ -52,6 +53,7 @@
+                         .name(ws.name())
+                         .pvpType(ws.pvptype())
+                         .location(ws.location())
++                        .transferType(ws.transferType())
+                         .build();
+ 
+                 ScrapePort.WorldOnline online = scrapePort.fetchWorldPage(ws.name(), pageWorld);
+@@ -71,13 +73,14 @@
+                             .name(ws.name())
+                             .pvpType(ws.pvptype())
+                             .location(ws.location())
++                            .transferType(ws.transferType())
+                             .build()));
+ 
+             world.setPvpType(ws.pvptype());
+             world.setLocation(ws.location());
+             world.setOnlineRecord(online.onlineRecord());
+             world.setCreationDate(online.creationDate());
+-            world.setTransferType(online.transferType());
++            world.setTransferType(firstNonBlank(online.transferType(), ws.transferType()));
+             world.setGameWorldType(online.gameWorldType());
+             worldRepo.save(world);
+ 
+@@ -87,7 +90,8 @@
+             scrape.setPlayersOnline(online.playersOnline());
+ 
+             int addedPlayers = 0;
+-            for (String playerName : online.playerNames()) {
++            for (ScrapePort.OnlineCharacter onlineCharacter : online.players()) {
++                String playerName = onlineCharacter.name();
+                 if (playerName == null || playerName.isBlank()) {
+                     continue;
+                 }
+@@ -96,7 +100,7 @@
+ 
+                 // Avoid one HTTP request per online character during the scheduled world scrape.
+                 // Rename reconciliation can be done later by a dedicated character-detail job.
+-                var character = namingService.ensureCharacterForName(normalizedPlayerName, normalizedPlayerName);
++                CharacterEntity character = namingService.ensureCharacterForName(normalizedPlayerName, normalizedPlayerName);
+ 
+                 characterRepo.findCharacterActiveName(character.getId()).ifPresent(name -> {
+                     if (!name.getName().equals(normalizedPlayerName)) {
+@@ -104,6 +108,8 @@
+                     }
+                 });
+ 
++                applyOnlineCharacterSnapshot(character, onlineCharacter);
++
+                 ScrapePlayer sp = new ScrapePlayer();
+                 sp.setCharacter(character);
+                 scrape.addPlayer(sp);
+@@ -116,16 +122,39 @@
+         });
+     }
+ 
++    private void applyOnlineCharacterSnapshot(CharacterEntity character, ScrapePort.OnlineCharacter onlineCharacter) {
++        if (onlineCharacter.level() != null) {
++            character.setLevel(onlineCharacter.level());
++        }
++
++        String vocationName = onlineCharacter.vocation();
++        if (vocationName != null && !vocationName.isBlank()) {
++            characterRepo.findVocationByNameOrPromotionName(vocationName)
++                    .ifPresent(character::setVocation);
++        }
++
++        characterRepo.save(character);
++    }
++
++    private String firstNonBlank(String first, String second) {
++        if (first != null && !first.isBlank()) {
++            return first.trim();
++        }
++        return second == null || second.isBlank() ? null : second.trim();
++    }
++
+     private static class WorldBuilder {
+-        private String name, pvpType, location;
++        private String name, pvpType, location, transferType;
+         WorldBuilder name(String v) { this.name = v; return this; }
+         WorldBuilder pvpType(String v) { this.pvpType = v; return this; }
+         WorldBuilder location(String v) { this.location = v; return this; }
++        WorldBuilder transferType(String v) { this.transferType = v; return this; }
+         World build() {
+             World w = new World();
+             w.setName(name);
+             w.setPvpType(pvpType);
+             w.setLocation(location);
++            w.setTransferType(transferType);
+             return w;
+         }
+     }
+--- a/src/main/java/com/nathan/tibiastats/domain/model/Vocation.java	2026-04-25 00:57:04.000000000 +0000
++++ b/src/main/java/com/nathan/tibiastats/domain/model/Vocation.java	2026-05-26 12:35:08.134151795 +0000
+@@ -2,7 +2,8 @@
+ 
+ import jakarta.persistence.*;
+ 
+-@Entity @Table(name="vocation")
++@Entity
++@Table(name="vocations")
+ public class Vocation {
+     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+     private Integer id;
+@@ -33,4 +34,4 @@
+     public void setPromotionName(String promotionName) {
+         this.promotionName = promotionName;
+     }
+-}
+\ No newline at end of file
++}
+--- a/src/main/java/com/nathan/tibiastats/domain/port/CharacterRepositoryPort.java	2026-04-25 00:57:04.000000000 +0000
++++ b/src/main/java/com/nathan/tibiastats/domain/port/CharacterRepositoryPort.java	2026-05-26 12:35:10.093732869 +0000
+@@ -15,6 +15,7 @@
+     Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
+     CharacterName saveName(CharacterName name);
+     Optional<CharacterName> findName(String name);
++    Optional<Vocation> findVocationByNameOrPromotionName(String vocationName);
+     CharacterStatRecord saveStat(CharacterStatRecord r);
+     List<CharacterStatRecord> findStatsBy(CharacterEntity c, StatCategory category);
+ }
+\ No newline at end of file
+--- a/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.java	2026-04-25 00:57:04.000000000 +0000
++++ b/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.java	2026-05-26 12:35:10.283675822 +0000
+@@ -8,7 +8,8 @@
+ import org.springframework.stereotype.Repository;
+ 
+ import java.time.Instant;
+-import java.util.*; import java.util.List;
++import java.util.List;
++import java.util.Optional;
+ 
+ interface CharacterJpa extends JpaRepository<CharacterEntity, Long> {
+     @Query("""
+@@ -35,17 +36,31 @@
+     @Query("select r from CharacterStatRecord r where r.character = :c and r.category = :cat order by r.date asc")
+     List<CharacterStatRecord> findByCat(CharacterEntity c, StatCategory cat);
+ }
++interface VocationJpa extends JpaRepository<Vocation, Integer> {
++    @Query("""
++        select v
++        from Vocation v
++        where lower(v.name) = lower(:vocationName)
++           or lower(v.promotionName) = lower(:vocationName)
++        """)
++    Optional<Vocation> findByNameOrPromotionName(String vocationName);
++}
+ 
+ @Repository
+ public class SpringCharacterRepository implements CharacterRepositoryPort {
+     private final CharacterNameJpa names;
+     private final CharacterJpa chars;
+     private final CharacterStatJpa stats;
++    private final VocationJpa vocations;
+ 
+-    public SpringCharacterRepository(CharacterNameJpa names, CharacterJpa chars, CharacterStatJpa stats) {
++    public SpringCharacterRepository(CharacterNameJpa names,
++                                     CharacterJpa chars,
++                                     CharacterStatJpa stats,
++                                     VocationJpa vocations) {
+         this.names = names;
+         this.chars = chars;
+         this.stats = stats;
++        this.vocations = vocations;
+     }
+ 
+     public CharacterName saveName(CharacterName name){
+@@ -58,6 +73,14 @@
+     }
+ 
+     @Override
++    public Optional<Vocation> findVocationByNameOrPromotionName(String vocationName) {
++        if (vocationName == null || vocationName.isBlank()) {
++            return Optional.empty();
++        }
++        return vocations.findByNameOrPromotionName(vocationName.trim());
++    }
++
++    @Override
+     public Optional<CharacterName> findCharacterActiveName(Long id) {
+         return names.findCharacterActiveName(id);
+     }
+@@ -89,4 +112,4 @@
+     public Optional<CharacterName> findActiveName(String name) {
+         return names.findByNameAndActiveTrue(name);
+     }
+-}
+\ No newline at end of file
++}

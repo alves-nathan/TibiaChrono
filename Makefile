@@ -6,6 +6,7 @@ SHELL := /bin/bash
 APP  ?= tibiastats
 DEV_COMPOSE := docker-compose.dev.yml
 PROD_COMPOSE := docker-compose.yml
+TEST_COMPOSE := docker-compose.test.yml
 
 # Default env vars (override by exporting in your shell or .env if you like)
 JWT_SECRET ?= please-change-me-to-a-very-long-random-secret
@@ -23,8 +24,11 @@ help:
 	@echo "  make down-dev      - stop dev compose (keep volumes)"
 	@echo "  make down-dev-clean - stop dev compose and remove volumes"
 	@echo "  make logs-dev      - tail dev app logs"
-	@echo "  make test          - run Maven tests on host"
+	@echo "  make test          - run full test suite using isolated test database"
 	@echo "  make test-dev      - run Maven tests INSIDE dev container"
+	@echo "  make test-down     - stop test database container/network"
+	@echo "  make test-clean    - stop test database and remove anonymous volumes"
+	@echo "  make test-logs     - tail test database logs"
 	@echo "  make db-psql       - open psql inside db container"
 	@echo "  make clean-vol     - remove named volumes (DB data)"
 	@echo "  make jwt-secret    - generate a long random JWT secret"
@@ -71,7 +75,19 @@ logs-dev:
 # ---- Tests ----
 .PHONY: test
 test:
-	mvn -Dtest=*IntegrationTest test
+	run ./run-tests.sh
+
+.PHONY: test-down
+test-down:
+	run ./run-tests.sh down
+
+.PHONY: test-clean
+test-clean:
+	run ./run-tests.sh clean
+
+.PHONY: test-logs
+test-logs:
+	run ./run-tests.sh logs
 
 .PHONY: test-dev
 test-dev:

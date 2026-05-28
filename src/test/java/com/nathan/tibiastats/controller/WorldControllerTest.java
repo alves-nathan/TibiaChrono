@@ -1,5 +1,6 @@
 package com.nathan.tibiastats.controller;
 
+import com.nathan.tibiastats.AbstractPostgresTest;
 import com.nathan.tibiastats.domain.model.World;
 import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.infrastructure.persistence.SpringWorldRepository;
@@ -14,15 +15,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class WorldControllerTest {
+class WorldControllerTest extends AbstractPostgresTest {
     @Autowired MockMvc mockMvc;
     @Autowired SpringWorldRepository repo;
 
     @Test
     void getWorldNow() throws Exception {
-        var w = repo.save(new World("Antica","Open PvP","Europe"));
+        var w = repo.save(new World("Testica","Open PvP","Europe"));
         repo.saveScrape(new Scrape(w, Instant.now(), 321, "[]"));
-        mockMvc.perform(get("/api/online/worlds/Antica").header("Authorization","Bearer test.test.test"))
+        mockMvc.perform(get("/api/online/worlds/Testica").header("Authorization","Bearer test.test.test"))
                 .andExpect(status().isUnauthorized()); // token invalid
     }
 }

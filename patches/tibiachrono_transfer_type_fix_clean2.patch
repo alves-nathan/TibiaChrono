@@ -1,0 +1,20 @@
+diff --git a/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java b/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java
+index f9d6fb3..03747ea 100644
+--- a/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java
++++ b/src/main/java/com/nathan/tibiastats/infrastructure/adapter/scraper/JsoupScrapeAdapter.java
+@@ -84,10 +84,12 @@ public class JsoupScrapeAdapter implements ScrapePort {
+                         continue;
+                     }
+                 }
++                if(tr.text().contains("Transfer Type:")) {
++                    world.setTransferType(Objects.requireNonNull(tr.lastElementChild()).text().trim());
++                    continue;
++                }
+                 if(tr.text().contains("Game World Type:")) {
+-                    if(world.getGameWorldType() == null){
+-                        world.setGameWorldType(Objects.requireNonNull(tr.lastElementChild()).text());
+-                    }
++                    world.setGameWorldType(Objects.requireNonNull(tr.lastElementChild()).text().trim());
+                 }
+             }
+ 

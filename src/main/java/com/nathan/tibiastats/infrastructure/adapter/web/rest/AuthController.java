@@ -12,7 +12,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.Map;
@@ -32,11 +36,13 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final TokenService tokens;
 
-    public AuthController(AuthenticationManager authManager,
-                          JwtService jwt,
-                          UserAccountRepository users,
-                          PasswordEncoder encoder,
-                          TokenService tokens) {
+    public AuthController(
+            AuthenticationManager authManager,
+            JwtService jwt,
+            UserAccountRepository users,
+            PasswordEncoder encoder,
+            TokenService tokens
+    ) {
         this.authManager = authManager;
         this.jwt = jwt;
         this.users = users;
@@ -54,6 +60,7 @@ public class AuthController {
         acc.setPassword(encoder.encode(req.password()));
         acc.setRoles((req.roles() == null || req.roles().isBlank()) ? "USER" : req.roles());
         users.save(acc);
+
         return ResponseEntity.ok().build();
     }
 
@@ -62,8 +69,10 @@ public class AuthController {
         Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.username(), req.password())
         );
+
         String access = jwt.generateAccessToken(auth.getName());
         String refresh = tokens.issueRefreshToken(auth.getName());
+
         return ResponseEntity.ok(new AuthResponse(access, refresh));
     }
 
@@ -87,7 +96,7 @@ public class AuthController {
         }
         UserAccount user = opt.get();
 
-        var rtOpt = tokens.refreshRepo.findByToken(req.refreshToken());
+        var rtOpt = tokens.findRefreshToken(req.refreshToken());
         if (rtOpt.isEmpty() || Boolean.TRUE.equals(rtOpt.get().getRevoked())) {
             return ResponseEntity.status(401).body(Map.of("error", "revoked"));
         }
@@ -95,22 +104,22 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "expired"));
         }
 
-        // rotate refresh: revoke old, issue new
         tokens.revokeRefreshToken(req.refreshToken());
         String newRefresh = tokens.issueRefreshToken(user.getUsername());
         String newAccess = jwt.generateAccessToken(user.getUsername());
+
         return ResponseEntity.ok(new AuthResponse(newAccess, newRefresh));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
                 Jws<Claims> jws = jwt.parse(token);
-                tokens.revokeAccessToken(jws.getBody().getId(), token, "logout");
+                tokens.revokeAccessToken(jws.getPayload().getId(), token, "logout");
             } catch (JwtException ignored) {
-                // invalid token — ignore
+                // Invalid token: logout is idempotent.
             }
         }
         return ResponseEntity.ok().build();

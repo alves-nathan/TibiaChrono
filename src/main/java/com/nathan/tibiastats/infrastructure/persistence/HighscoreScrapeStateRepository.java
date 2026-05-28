@@ -117,6 +117,101 @@ public class HighscoreScrapeStateRepository {
                 scope.worldId(), scope.category().name(), scope.vocationFilterId());
     }
 
+
+    public HighscoreHttpBackoffState getHttpBackoffState() {
+        ensureHttpBackoffRow();
+        return jdbc.queryForObject("""
+            select cooldown_until,
+                   consecutive_failures,
+                   current_cooldown_ms,
+                   last_status,
+                   last_reason,
+                   last_failure_at,
+                   last_success_at
+              from highscore_http_backoff_state
+             where id = 1
+            """, this::mapHttpBackoffState);
+    }
+
+    public HighscoreHttpBackoffState activateHttpBackoff(long initialCooldownMs, long maxCooldownMs, double multiplier, String reason) {
+        ensureHttpBackoffRow();
+        HighscoreHttpBackoffState current = getHttpBackoffState();
+        Instant now = Instant.now();
+        if (current != null && current.isActive(now)) {
+            return current;
+        }
+
+        long normalizedInitial = Math.max(0L, initialCooldownMs);
+        long normalizedMax = Math.max(normalizedInitial, maxCooldownMs);
+        double normalizedMultiplier = multiplier < 1.0D ? 1.0D : multiplier;
+        long previousCooldown = current == null ? 0L : Math.max(0L, current.currentCooldownMs());
+        long nextCooldown = previousCooldown <= 0L
+                ? normalizedInitial
+                : Math.min(normalizedMax, Math.max(normalizedInitial, Math.round(previousCooldown * normalizedMultiplier)));
+        Instant cooldownUntil = now.plusMillis(nextCooldown);
+        int consecutiveFailures = current == null ? 1 : current.consecutiveFailures() + 1;
+
+        jdbc.update("""
+            update highscore_http_backoff_state
+               set cooldown_until = ?,
+                   consecutive_failures = ?,
+                   current_cooldown_ms = ?,
+                   last_status = 'FORBIDDEN',
+                   last_reason = ?,
+                   last_failure_at = ?,
+                   updated_at = now()
+             where id = 1
+            """,
+                java.sql.Timestamp.from(cooldownUntil),
+                consecutiveFailures,
+                nextCooldown,
+                truncate(reason, 4000),
+                java.sql.Timestamp.from(now)
+        );
+
+        return getHttpBackoffState();
+    }
+
+    public void resetHttpBackoffAfterSuccess() {
+        ensureHttpBackoffRow();
+        jdbc.update("""
+            update highscore_http_backoff_state
+               set cooldown_until = null,
+                   consecutive_failures = 0,
+                   current_cooldown_ms = 0,
+                   last_status = 'OK',
+                   last_reason = null,
+                   last_success_at = now(),
+                   updated_at = now()
+             where id = 1
+            """);
+    }
+
+    private void ensureHttpBackoffRow() {
+        jdbc.update("""
+            insert into highscore_http_backoff_state (id, updated_at)
+            values (1, now())
+            on conflict (id) do nothing
+            """);
+    }
+
+    private HighscoreHttpBackoffState mapHttpBackoffState(ResultSet rs, int rowNum) throws SQLException {
+        return new HighscoreHttpBackoffState(
+                toInstant(rs, "cooldown_until"),
+                rs.getInt("consecutive_failures"),
+                rs.getLong("current_cooldown_ms"),
+                rs.getString("last_status"),
+                rs.getString("last_reason"),
+                toInstant(rs, "last_failure_at"),
+                toInstant(rs, "last_success_at")
+        );
+    }
+
+    private Instant toInstant(ResultSet rs, String column) throws SQLException {
+        java.sql.Timestamp timestamp = rs.getTimestamp(column);
+        return timestamp == null ? null : timestamp.toInstant();
+    }
+
     private HighscoreScope mapScope(ResultSet rs, int rowNum) throws SQLException {
         return new HighscoreScope(
                 rs.getInt("world_id"),
@@ -131,5 +226,26 @@ public class HighscoreScrapeStateRepository {
             return null;
         }
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    public record HighscoreHttpBackoffState(
+            Instant cooldownUntil,
+            int consecutiveFailures,
+            long currentCooldownMs,
+            String lastStatus,
+            String lastReason,
+            Instant lastFailureAt,
+            Instant lastSuccessAt
+    ) {
+        public boolean isActive(Instant now) {
+            return cooldownUntil != null && cooldownUntil.isAfter(now);
+        }
+
+        public long remainingMs(Instant now) {
+            if (!isActive(now)) {
+                return 0L;
+            }
+            return Math.max(0L, java.time.Duration.between(now, cooldownUntil).toMillis());
+        }
     }
 }

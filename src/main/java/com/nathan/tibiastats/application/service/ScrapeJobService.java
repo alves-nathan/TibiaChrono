@@ -14,6 +14,7 @@ public class ScrapeJobService {
     public static final String WORLD_SCRAPER = "WORLD_SCRAPER";
     public static final String CHARACTER_DETAILS_SCRAPER = "CHARACTER_DETAILS_SCRAPER";
     public static final String HIGHSCORE_SCRAPER = "HIGHSCORE_SCRAPER";
+    public static final String GUILD_SCRAPER = "GUILD_SCRAPER";
 
     private final ScrapeJobExecutionRepository repository;
 

@@ -6,10 +6,12 @@ import com.nathan.tibiastats.application.service.ScrapeJobService;
 import com.nathan.tibiastats.config.AppProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "tibiastats.scrape.character-details", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CharacterDetailsScrapeScheduler {
     private static final Logger log = LoggerFactory.getLogger(CharacterDetailsScrapeScheduler.class);
     private static final String LOG_PREFIX = "[CHARACTER_DETAILS_SCRAPER]";

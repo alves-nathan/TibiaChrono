@@ -1,0 +1,46 @@
+package com.nathan.tibiastats.domain.port;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public interface GuildScrapePort {
+    List<GuildListItem> fetchGuildList(String worldName);
+
+    GuildDetail fetchGuildDetail(String guildName);
+
+    record GuildListItem(
+            String name,
+            String worldName,
+            boolean active,
+            String description
+    ) {}
+
+    record GuildDetail(
+            String name,
+            String worldName,
+            String description,
+            String homepage,
+            String logoUrl,
+            LocalDate foundedAt,
+            Integer memberCount,
+            Integer onlineCount,
+            String rawHash,
+            List<Member> members,
+            List<Invite> invites
+    ) {}
+
+    record Member(
+            String name,
+            String rankName,
+            String title,
+            String vocation,
+            Integer level,
+            LocalDate joinedOn,
+            boolean online
+    ) {}
+
+    record Invite(
+            String characterName,
+            LocalDate invitedAt
+    ) {}
+}

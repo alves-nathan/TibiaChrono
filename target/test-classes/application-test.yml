@@ -1,6 +1,47 @@
 spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/tibiastats_test}
+    username: ${TEST_DB_USERNAME:tibia}
+    password: ${TEST_DB_PASSWORD:secret}
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
+    show-sql: false
+
   flyway:
     enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: "test-secret-key-which-is-very-long-and-random-1234567890"
+
+logging:
+  level:
+    root: WARN
+    com.nathan.tibiastats: INFO
+
+tibiastats:
+  scrape:
+    worlds:
+      enabled: false
+      rate-ms: 3600000
+    character-details:
+      enabled: false
+      rate-ms: 3600000
+      initial-delay-ms: 3600000
+      batch-size: 0
+    highscores:
+      enabled: false
+    guilds:
+      enabled: false
+      rate-ms: 3600000
+      initial-delay-ms: 3600000
+      guild-limit: 1
+      page-delay-ms: 0

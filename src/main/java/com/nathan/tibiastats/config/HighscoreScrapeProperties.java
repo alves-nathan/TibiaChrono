@@ -35,7 +35,13 @@ public class HighscoreScrapeProperties {
     private int requestMaxAttempts = 1;
     private int retryBaseDelayMs = 5000;
     private int retryMaxDelayMs = 300000;
+    /**
+     * Deprecated compatibility field. Use forbiddenInitialCooldownMs/forbiddenMaxCooldownMs instead.
+     */
     private int forbiddenCooldownMs = 14400000;
+    private long forbiddenInitialCooldownMs = 86400000L; // 24h
+    private long forbiddenMaxCooldownMs = 604800000L;    // 7d
+    private double forbiddenCooldownMultiplier = 2.0D;
     private int requestJitterMs = 300;
     private int requestMinIntervalMs = 750;
     private int cooldownLogIntervalMs = 30000;
@@ -193,6 +199,33 @@ public class HighscoreScrapeProperties {
 
     public void setForbiddenCooldownMs(int forbiddenCooldownMs) {
         this.forbiddenCooldownMs = forbiddenCooldownMs;
+        if (forbiddenInitialCooldownMs <= 0) {
+            this.forbiddenInitialCooldownMs = forbiddenCooldownMs;
+        }
+    }
+
+    public long getForbiddenInitialCooldownMs() {
+        return Math.max(0L, forbiddenInitialCooldownMs);
+    }
+
+    public void setForbiddenInitialCooldownMs(long forbiddenInitialCooldownMs) {
+        this.forbiddenInitialCooldownMs = forbiddenInitialCooldownMs;
+    }
+
+    public long getForbiddenMaxCooldownMs() {
+        return Math.max(getForbiddenInitialCooldownMs(), forbiddenMaxCooldownMs);
+    }
+
+    public void setForbiddenMaxCooldownMs(long forbiddenMaxCooldownMs) {
+        this.forbiddenMaxCooldownMs = forbiddenMaxCooldownMs;
+    }
+
+    public double getForbiddenCooldownMultiplier() {
+        return forbiddenCooldownMultiplier < 1.0D ? 1.0D : forbiddenCooldownMultiplier;
+    }
+
+    public void setForbiddenCooldownMultiplier(double forbiddenCooldownMultiplier) {
+        this.forbiddenCooldownMultiplier = forbiddenCooldownMultiplier;
     }
 
     public int getRequestJitterMs() {
@@ -266,6 +299,9 @@ public class HighscoreScrapeProperties {
         plan.setRetryBaseDelayMs(retryBaseDelayMs);
         plan.setRetryMaxDelayMs(retryMaxDelayMs);
         plan.setForbiddenCooldownMs(forbiddenCooldownMs);
+        plan.setForbiddenInitialCooldownMs(forbiddenInitialCooldownMs);
+        plan.setForbiddenMaxCooldownMs(forbiddenMaxCooldownMs);
+        plan.setForbiddenCooldownMultiplier(forbiddenCooldownMultiplier);
         plan.setRequestJitterMs(requestJitterMs);
         plan.setRequestMinIntervalMs(requestMinIntervalMs);
         plan.setCooldownLogIntervalMs(cooldownLogIntervalMs);
@@ -351,7 +387,13 @@ public class HighscoreScrapeProperties {
         private int requestMaxAttempts = 1;
         private int retryBaseDelayMs = 5000;
         private int retryMaxDelayMs = 300000;
+        /**
+         * Deprecated compatibility field. Use forbiddenInitialCooldownMs/forbiddenMaxCooldownMs instead.
+         */
         private int forbiddenCooldownMs = 14400000;
+        private long forbiddenInitialCooldownMs = 86400000L; // 24h
+        private long forbiddenMaxCooldownMs = 604800000L;    // 7d
+        private double forbiddenCooldownMultiplier = 2.0D;
         private int requestJitterMs = 300;
         private int requestMinIntervalMs = 750;
         private int cooldownLogIntervalMs = 30000;
@@ -394,7 +436,18 @@ public class HighscoreScrapeProperties {
         public int getRetryMaxDelayMs() { return Math.max(getRetryBaseDelayMs(), retryMaxDelayMs); }
         public void setRetryMaxDelayMs(int retryMaxDelayMs) { this.retryMaxDelayMs = retryMaxDelayMs; }
         public int getForbiddenCooldownMs() { return Math.max(0, forbiddenCooldownMs); }
-        public void setForbiddenCooldownMs(int forbiddenCooldownMs) { this.forbiddenCooldownMs = forbiddenCooldownMs; }
+        public void setForbiddenCooldownMs(int forbiddenCooldownMs) {
+            this.forbiddenCooldownMs = forbiddenCooldownMs;
+            if (forbiddenInitialCooldownMs <= 0) {
+                this.forbiddenInitialCooldownMs = forbiddenCooldownMs;
+            }
+        }
+        public long getForbiddenInitialCooldownMs() { return Math.max(0L, forbiddenInitialCooldownMs); }
+        public void setForbiddenInitialCooldownMs(long forbiddenInitialCooldownMs) { this.forbiddenInitialCooldownMs = forbiddenInitialCooldownMs; }
+        public long getForbiddenMaxCooldownMs() { return Math.max(getForbiddenInitialCooldownMs(), forbiddenMaxCooldownMs); }
+        public void setForbiddenMaxCooldownMs(long forbiddenMaxCooldownMs) { this.forbiddenMaxCooldownMs = forbiddenMaxCooldownMs; }
+        public double getForbiddenCooldownMultiplier() { return forbiddenCooldownMultiplier < 1.0D ? 1.0D : forbiddenCooldownMultiplier; }
+        public void setForbiddenCooldownMultiplier(double forbiddenCooldownMultiplier) { this.forbiddenCooldownMultiplier = forbiddenCooldownMultiplier; }
         public int getRequestJitterMs() { return Math.max(0, requestJitterMs); }
         public void setRequestJitterMs(int requestJitterMs) { this.requestJitterMs = requestJitterMs; }
         public int getRequestMinIntervalMs() { return Math.max(0, requestMinIntervalMs); }
@@ -424,6 +477,9 @@ public class HighscoreScrapeProperties {
                     + ", requestParallelism=" + getRequestParallelism()
                     + ", requestMinIntervalMs=" + getRequestMinIntervalMs()
                     + ", requestMaxAttempts=" + getRequestMaxAttempts()
+                    + ", forbiddenInitialCooldownMs=" + getForbiddenInitialCooldownMs()
+                    + ", forbiddenMaxCooldownMs=" + getForbiddenMaxCooldownMs()
+                    + ", forbiddenCooldownMultiplier=" + getForbiddenCooldownMultiplier()
                     + ", abortRunOnForbidden=" + abortRunOnForbidden;
         }
     }

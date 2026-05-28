@@ -23,6 +23,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_SECRET_KEY: "please-change-me-to-a-very-long-random-secret"
+      TIBIASTATS_SCRAPE_WORLDS_ENABLED: "true"
+      TIBIASTATS_SCRAPE_CHARACTER_DETAILS_ENABLED: "true"
+      TIBIASTATS_SCRAPE_GUILDS_ENABLED: "false"
       SPRING_FLYWAY_URL: jdbc:postgresql://db:5432/tibiastats
       SPRING_FLYWAY_USER: tibia
       SPRING_FLYWAY_PASSWORD: secret

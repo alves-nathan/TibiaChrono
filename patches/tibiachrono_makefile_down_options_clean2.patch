@@ -1,0 +1,42 @@
+diff --git a/Makefile b/Makefile
+index 9ec9833..65b5caf 100644
+--- a/Makefile
++++ b/Makefile
+@@ -15,11 +15,13 @@ JWT_SECRET ?= please-change-me-to-a-very-long-random-secret
+ help:
+ 	@echo "Usage:"
+ 	@echo "  make up            - build & start prod-like compose (detached)"
+-	@echo "  make down          - stop prod-like compose"
++	@echo "  make down          - stop prod-like compose (keep volumes)"
++	@echo "  make down-clean    - stop prod-like compose and remove volumes"
+ 	@echo "  make logs          - tail prod-like app logs"
+ 	@echo "  make rebuild       - rebuild prod-like app image"
+ 	@echo "  make up-dev        - build & start dev (hot-reload) compose"
+-	@echo "  make down-dev      - stop dev compose"
++	@echo "  make down-dev      - stop dev compose (keep volumes)"
++	@echo "  make down-dev-clean - stop dev compose and remove volumes"
+ 	@echo "  make logs-dev      - tail dev app logs"
+ 	@echo "  make test          - run Maven tests on host"
+ 	@echo "  make test-dev      - run Maven tests INSIDE dev container"
+@@ -37,6 +39,10 @@ up:
+ down:
+ 	docker compose -f $(PROD_COMPOSE) down
+ 
++.PHONY: down-clean
++down-clean:
++	docker compose -f $(PROD_COMPOSE) down -v
++
+ .PHONY: logs
+ logs:
+ 	docker compose -f $(PROD_COMPOSE) logs -f app
+@@ -52,6 +58,10 @@ up-dev:
+ 
+ .PHONY: down-dev
+ down-dev:
++	docker compose -f $(DEV_COMPOSE) down
++
++.PHONY: down-dev-clean
++down-dev-clean:
+ 	docker compose -f $(DEV_COMPOSE) down -v
+ 
+ .PHONY: logs-dev

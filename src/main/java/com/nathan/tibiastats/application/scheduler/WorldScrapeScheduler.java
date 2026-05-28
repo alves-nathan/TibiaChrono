@@ -4,10 +4,12 @@ import com.nathan.tibiastats.application.service.ScrapeJobResult;
 import com.nathan.tibiastats.application.service.ScrapeJobService;
 import com.nathan.tibiastats.application.service.ScrapeService;
 import com.nathan.tibiastats.config.AppProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "tibiastats.scrape.worlds", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class WorldScrapeScheduler {
     private final ScrapeService scrapeService;
     private final AppProperties props;

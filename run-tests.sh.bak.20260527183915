@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COMPOSE_FILE="${TEST_COMPOSE_FILE:-docker-compose.test.yml}"
+DB_SERVICE="${TEST_DB_SERVICE:-db-test}"
+DB_CONTAINER="${TEST_DB_CONTAINER:-tibiachrono-db-test}"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./run-tests.sh          Start the test database and run Maven tests
+  ./run-tests.sh run      Start the test database and run Maven tests
+  ./run-tests.sh down     Stop and remove the test database container/network
+  ./run-tests.sh clean    Stop and remove the test database container/network and anonymous volumes
+  ./run-tests.sh logs     Show test database logs
+EOF
+}
+
+cmd="${1:-run}"
+
+case "$cmd" in
+  run|test)
+    docker compose -f "$COMPOSE_FILE" up -d "$DB_SERVICE"
+
+    echo "Waiting for PostgreSQL test database..."
+    for i in {1..60}; do
+      if docker exec "$DB_CONTAINER" pg_isready -U tibia -d tibiastats_test >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+      if [ "$i" = "60" ]; then
+        echo "PostgreSQL test database did not become ready in time" >&2
+        docker compose -f "$COMPOSE_FILE" logs "$DB_SERVICE" >&2
+        exit 1
+      fi
+    done
+
+    export SPRING_PROFILES_ACTIVE=test
+    export TEST_DB_URL="jdbc:postgresql://localhost:5433/tibiastats_test"
+    export TEST_DB_USERNAME="tibia"
+    export TEST_DB_PASSWORD="secret"
+
+    mvn -U clean test
+    ;;
+
+  down|stop)
+    docker compose -f "$COMPOSE_FILE" down
+    ;;
+
+  clean|down-clean)
+    docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+    ;;
+
+  logs)
+    docker compose -f "$COMPOSE_FILE" logs -f "$DB_SERVICE"
+    ;;
+
+  help|-h|--help)
+    usage
+    ;;
+
+  *)
+    echo "Unknown command: $cmd" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

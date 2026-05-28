@@ -1,0 +1,662 @@
+diff --git a/src/main/java/com/nathan/tibiastats/application/service/CharacterNamingService.java b/src/main/java/com/nathan/tibiastats/application/service/CharacterNamingService.java
+index 50255ba..2fb7fcd 100644
+--- a/src/main/java/com/nathan/tibiastats/application/service/CharacterNamingService.java
++++ b/src/main/java/com/nathan/tibiastats/application/service/CharacterNamingService.java
+@@ -3,58 +3,294 @@ package com.nathan.tibiastats.application.service;
+ import com.nathan.tibiastats.domain.model.CharacterEntity;
+ import com.nathan.tibiastats.domain.model.CharacterName;
+ import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
++
+ import java.time.Instant;
++import java.time.ZoneOffset;
++import java.time.ZonedDateTime;
++import java.util.ArrayList;
++import java.util.LinkedHashSet;
++import java.util.List;
++import java.util.Locale;
++import java.util.Objects;
++import java.util.Optional;
+ 
+ @Service
+ public class CharacterNamingService {
++    private static final Logger log = LoggerFactory.getLogger(CharacterNamingService.class);
++    private static final int FORMER_NAME_SAFE_RESOLUTION_MONTHS = 6;
++
+     private final CharacterRepositoryPort repo;
+ 
+-    public CharacterNamingService(CharacterRepositoryPort repo){ this.repo = repo; }
++    public CharacterNamingService(CharacterRepositoryPort repo){
++        this.repo = repo;
++    }
+ 
++    /**
++     * Resolves a name seen in a scrape. If former names are known from an official character page,
++     * this also reconciles the historical names to the same CharacterEntity.
++     */
+     @Transactional
+     public CharacterEntity ensureCharacterForName(String name, String formerNames){
++        List<String> parsedFormerNames = parseFormerNames(formerNames, name);
+ 
+-        if (!formerNames.equals(name)) {
+-            for (String formerName : formerNames.split(",")) {
+-                var nameClass = repo.findName(name);
+-                if(nameClass.isPresent()) {
+-                    CharacterName characterName = nameClass.get();
+-                    if (characterName.getActive()) {
+-                        this.handleRenamed(characterName.getCharacter(), name, characterName);
+-                    }
+-                }
+-            }
++        if (parsedFormerNames.isEmpty()) {
++            return resolveObservedName(name);
+         }
+ 
+-        var character = repo.findByAnyName(name, CharacterName.INACTIVE_HORIZON);
++        return reconcileOfficialNames(name, parsedFormerNames);
++    }
+ 
+-        if (character.isPresent()) {
+-            return character.get();
+-        }
++    /**
++     * Resolves a plain mention to a character.
++     *
++     * A former name only resolves automatically while it is inside the 6-month safe window.
++     * After that, the name may have been released/reused by CipSoft, so it must not be treated
++     * as a safe identity key for a new mention.
++     */
++    @Transactional
++    public CharacterEntity resolveObservedName(String observedName) {
++        String normalizedName = normalizeName(observedName);
++
++        return repo.findByAnyName(normalizedName, formerNameCutoff())
++                .orElseGet(() -> createCharacterWithActiveName(normalizedName));
++    }
++
++    /**
++     * Reconciles the official state returned by Tibia.com:
++     *
++     * Name: Current Name
++     * Former Names: Old Name 1, Old Name 2
++     *
++     * The current name and all former names still shown by the official page identify the same
++     * CharacterEntity and must not create duplicated characters.
++     */
++    @Transactional
++    public CharacterEntity reconcileOfficialNames(String currentName, List<String> formerNames) {
++        return reconcileOfficialNames(null, currentName, formerNames);
++    }
++
++    @Transactional
++    public CharacterEntity reconcileOfficialNames(CharacterEntity knownCharacter, String currentName, List<String> formerNames) {
++        String normalizedCurrentName = normalizeName(currentName);
++        List<String> normalizedFormerNames = normalizeFormerNames(formerNames, normalizedCurrentName);
+ 
+-        var c = new CharacterEntity();
+-        c = repo.save(c);
++        CharacterEntity canonical = findCanonicalCharacter(knownCharacter, normalizedCurrentName, normalizedFormerNames)
++                .orElseGet(() -> createCharacterWithActiveName(normalizedCurrentName));
+ 
+-        var cn = CharacterName.createActive(name, c);
+-        repo.saveName(cn);
+-        c.addName(cn);
+-        c=repo.save(c);
++        canonical = mergeDuplicateCandidatesIntoCanonical(canonical, knownCharacter, normalizedCurrentName, normalizedFormerNames);
++
++        Instant now = Instant.now();
++        deactivateActiveNamesExcept(canonical, normalizedCurrentName, now);
++        ensureActiveName(canonical, normalizedCurrentName);
++
++        for (String formerName : normalizedFormerNames) {
++            ensureInactiveName(canonical, formerName, now);
++        }
+ 
+-        return c;
++        return repo.save(canonical);
+     }
+ 
++    /**
++     * Legacy entry point kept for existing callers.
++     */
+     @Transactional
+     public void handleRenamed(CharacterEntity c, String newActiveName, CharacterName oldName){
+-        // deactivate old name
+-        if (oldName.getActive().equals(Boolean.TRUE)) {
+-            oldName.deactivate(Instant.now());
+-            //create new name
+-            var newName = CharacterName.createActive(newActiveName, c);
+-            repo.saveName(newName);
+-            c.addName(newName);
+-            repo.save(c);
++        List<String> formerNames = oldName == null ? List.of() : List.of(oldName.getName());
++        reconcileOfficialNames(c, newActiveName, formerNames);
++    }
++
++    private Optional<CharacterEntity> findCanonicalCharacter(CharacterEntity knownCharacter,
++                                                            String currentName,
++                                                            List<String> formerNames) {
++        List<CharacterEntity> candidates = findIdentityCandidates(knownCharacter, currentName, formerNames);
++
++        return candidates.stream()
++                .filter(c -> c.getId() != null)
++                .min((a, b) -> Long.compare(a.getId(), b.getId()));
++    }
++
++    private CharacterEntity mergeDuplicateCandidatesIntoCanonical(CharacterEntity canonical,
++                                                                  CharacterEntity knownCharacter,
++                                                                  String currentName,
++                                                                  List<String> formerNames) {
++        List<CharacterEntity> candidates = findIdentityCandidates(knownCharacter, currentName, formerNames);
++        CharacterEntity managedCanonical = reload(canonical);
++
++        for (CharacterEntity candidate : candidates) {
++            if (candidate.getId() == null || candidate.getId().equals(managedCanonical.getId())) {
++                continue;
++            }
++
++            CharacterEntity duplicate = reload(candidate);
++            copyMissingDetails(managedCanonical, duplicate);
++            repo.save(managedCanonical);
++
++            log.warn(
++                    "[CHARACTER_NAMING] Merging duplicated character fromCharacterId={} into toCharacterId={} based on official names currentName='{}', formerNames={}",
++                    duplicate.getId(), managedCanonical.getId(), currentName, formerNames
++            );
++
++            repo.mergeCharacterReferences(duplicate.getId(), managedCanonical.getId());
++            repo.deleteCharacter(duplicate.getId());
++            managedCanonical = reload(managedCanonical);
++        }
++
++        return managedCanonical;
++    }
++
++    private List<CharacterEntity> findIdentityCandidates(CharacterEntity knownCharacter,
++                                                         String currentName,
++                                                         List<String> formerNames) {
++        LinkedHashSet<Long> seenIds = new LinkedHashSet<>();
++        List<CharacterEntity> candidates = new ArrayList<>();
++
++        addCandidate(candidates, seenIds, knownCharacter);
++        repo.findByAnyName(currentName, formerNameCutoff()).ifPresent(c -> addCandidate(candidates, seenIds, c));
++
++        for (String formerName : formerNames) {
++            repo.findByAnyName(formerName, formerNameCutoff()).ifPresent(c -> addCandidate(candidates, seenIds, c));
++        }
++
++        return candidates;
++    }
++
++    private void addCandidate(List<CharacterEntity> candidates, LinkedHashSet<Long> seenIds, CharacterEntity candidate) {
++        if (candidate == null || candidate.getId() == null || !seenIds.add(candidate.getId())) {
++            return;
++        }
++        candidates.add(candidate);
++    }
++
++    private CharacterEntity createCharacterWithActiveName(String name) {
++        CharacterEntity character = repo.save(new CharacterEntity());
++        CharacterName characterName = CharacterName.createActive(name, character);
++        repo.saveName(characterName);
++        character.addName(characterName);
++        return repo.save(character);
++    }
++
++    private CharacterEntity reload(CharacterEntity character) {
++        if (character == null || character.getId() == null) {
++            return character;
++        }
++        return repo.findById(character.getId()).orElse(character);
++    }
++
++    private void deactivateActiveNamesExcept(CharacterEntity character, String activeName, Instant when) {
++        for (CharacterName name : repo.findNamesForCharacter(character.getId())) {
++            if (name.isActive() && !sameName(name.getName(), activeName)) {
++                name.deactivate(when);
++                repo.saveName(name);
++            }
++        }
++    }
++
++    private void ensureActiveName(CharacterEntity character, String activeName) {
++        Optional<CharacterName> existingForCharacter = repo.findNameForCharacter(character.getId(), activeName);
++
++        if (existingForCharacter.isPresent()) {
++            CharacterName existing = existingForCharacter.get();
++            if (!existing.isActive()) {
++                existing.activate();
++                repo.saveName(existing);
++            }
++            return;
++        }
++
++        CharacterName newActiveName = CharacterName.createActive(activeName, character);
++        repo.saveName(newActiveName);
++        character.addName(newActiveName);
++    }
++
++    private void ensureInactiveName(CharacterEntity character, String formerName, Instant when) {
++        if (isBlank(formerName)) {
++            return;
++        }
++
++        Optional<CharacterName> existingForCharacter = repo.findNameForCharacter(character.getId(), formerName);
++
++        if (existingForCharacter.isPresent()) {
++            CharacterName existing = existingForCharacter.get();
++            if (existing.isActive()) {
++                existing.deactivate(when);
++                repo.saveName(existing);
++            }
++            return;
+         }
++
++        CharacterName inactiveName = CharacterName.createInactive(formerName, character, when);
++        repo.saveName(inactiveName);
++        character.addName(inactiveName);
++    }
++
++    private void copyMissingDetails(CharacterEntity target, CharacterEntity source) {
++        if (target.getSex() == null) target.setSex(source.getSex());
++        if (target.getVocation() == null) target.setVocation(source.getVocation());
++        if (target.getLevel() == null) target.setLevel(source.getLevel());
++        if (target.getAchievementPoints() == null) target.setAchievementPoints(source.getAchievementPoints());
++        if (target.getResidence() == null) target.setResidence(source.getResidence());
++        if (target.getLastLogin() == null) target.setLastLogin(source.getLastLogin());
++        if (target.getAccStatus() == null) target.setAccStatus(source.getAccStatus());
++        if (target.getCreationDate() == null) target.setCreationDate(source.getCreationDate());
++    }
++
++    private Instant formerNameCutoff() {
++        return ZonedDateTime.now(ZoneOffset.UTC)
++                .minusMonths(FORMER_NAME_SAFE_RESOLUTION_MONTHS)
++                .toInstant();
++    }
++
++    private List<String> parseFormerNames(String formerNames, String currentName) {
++        if (isBlank(formerNames)) {
++            return List.of();
++        }
++
++        String normalizedCurrentName = normalizeName(currentName);
++        String[] parts = formerNames.split(",");
++        List<String> parsed = new ArrayList<>();
++
++        for (String part : parts) {
++            String normalized = normalizeName(part);
++            if (!isBlank(normalized) && !sameName(normalized, normalizedCurrentName)) {
++                parsed.add(normalized);
++            }
++        }
++
++        return normalizeFormerNames(parsed, normalizedCurrentName);
++    }
++
++    private List<String> normalizeFormerNames(List<String> formerNames, String currentName) {
++        if (formerNames == null || formerNames.isEmpty()) {
++            return List.of();
++        }
++
++        LinkedHashSet<String> normalized = new LinkedHashSet<>();
++        for (String formerName : formerNames) {
++            String value = normalizeName(formerName);
++            if (!isBlank(value) && !sameName(value, currentName)) {
++                normalized.add(value);
++            }
++        }
++
++        return List.copyOf(normalized);
++    }
++
++    private String normalizeName(String name) {
++        if (name == null) {
++            return "";
++        }
++        return name.trim().replaceAll("\\s+", " ");
++    }
++
++    private boolean sameName(String a, String b) {
++        return Objects.equals(normalizeName(a).toLowerCase(Locale.ROOT), normalizeName(b).toLowerCase(Locale.ROOT));
++    }
++
++    private boolean isBlank(String value) {
++        return value == null || value.trim().isEmpty();
+     }
+ }
+diff --git a/src/main/java/com/nathan/tibiastats/domain/model/CharacterName.java b/src/main/java/com/nathan/tibiastats/domain/model/CharacterName.java
+index 2e08d0d..236076d 100644
+--- a/src/main/java/com/nathan/tibiastats/domain/model/CharacterName.java
++++ b/src/main/java/com/nathan/tibiastats/domain/model/CharacterName.java
+@@ -3,21 +3,24 @@ package com.nathan.tibiastats.domain.model;
+ import jakarta.persistence.*;
+ 
+ import java.time.Instant;
+-import java.time.ZoneOffset;
+-import java.time.ZonedDateTime;
+ 
+-@Entity @Table(name="character_names")
++@Entity
++@Table(name="character_names")
+ public class CharacterName {
+-    public static final Instant INACTIVE_HORIZON = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(6).toInstant();
+-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
+     private Long id;
++
+     @ManyToOne(optional = false)
+     @JoinColumn(name = "character_id")
+     private CharacterEntity character;
+-    @Column(nullable=false, unique=true)
++
++    @Column(nullable=false)
+     private String name;
++
+     @Column(name = "active")
+     private Boolean active;
++
+     @Column(name = "inactive_date")
+     private Instant inactiveDate;
+ 
+@@ -61,17 +64,37 @@ public class CharacterName {
+         this.character = character;
+     }
+ 
++    public boolean isActive() {
++        return Boolean.TRUE.equals(active);
++    }
++
++    public boolean belongsTo(CharacterEntity c) {
++        return c != null && c.getId() != null && character != null && c.getId().equals(character.getId());
++    }
++
+     public static CharacterName createActive(String name, CharacterEntity c) {
+         CharacterName cn = new CharacterName();
+         cn.setName(name);
+         cn.setCharacter(c);
+-        cn.setActive(true);
+-        cn.setInactiveDate(null);
++        cn.activate();
+         return cn;
+     }
+ 
++    public static CharacterName createInactive(String name, CharacterEntity c, Instant when) {
++        CharacterName cn = new CharacterName();
++        cn.setName(name);
++        cn.setCharacter(c);
++        cn.deactivate(when);
++        return cn;
++    }
++
++    public void activate() {
++        this.setActive(true);
++        this.setInactiveDate(null);
++    }
++
+     public void deactivate(Instant when) {
+         this.setActive(false);
+         this.setInactiveDate(when);
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/main/java/com/nathan/tibiastats/domain/port/CharacterRepositoryPort.java b/src/main/java/com/nathan/tibiastats/domain/port/CharacterRepositoryPort.java
+index d8c9a3b..7b164ed 100644
+--- a/src/main/java/com/nathan/tibiastats/domain/port/CharacterRepositoryPort.java
++++ b/src/main/java/com/nathan/tibiastats/domain/port/CharacterRepositoryPort.java
+@@ -15,6 +15,11 @@ public interface CharacterRepositoryPort {
+     Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
+     CharacterName saveName(CharacterName name);
+     Optional<CharacterName> findName(String name);
++    List<CharacterName> findNames(String name);
++    Optional<CharacterName> findNameForCharacter(Long characterId, String name);
++    List<CharacterName> findNamesForCharacter(Long characterId);
+     CharacterStatRecord saveStat(CharacterStatRecord r);
+     List<CharacterStatRecord> findStatsBy(CharacterEntity c, StatCategory category);
+-}
+\ No newline at end of file
++    void mergeCharacterReferences(Long fromCharacterId, Long toCharacterId);
++    void deleteCharacter(Long characterId);
++}
+diff --git a/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.java b/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.java
+index 7dfa222..ff63bb2 100644
+--- a/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.java
++++ b/src/main/java/com/nathan/tibiastats/infrastructure/persistence/SpringCharacterRepository.java
+@@ -4,48 +4,154 @@ import com.nathan.tibiastats.domain.model.*;
+ import com.nathan.tibiastats.domain.model.CharacterEntity;
+ import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
+ import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.data.jpa.repository.Modifying;
+ import org.springframework.data.jpa.repository.Query;
++import org.springframework.data.repository.query.Param;
+ import org.springframework.stereotype.Repository;
++import org.springframework.transaction.annotation.Transactional;
+ 
+ import java.time.Instant;
+-import java.util.*; import java.util.List;
++import java.util.*;
++import java.util.List;
+ 
+ interface CharacterJpa extends JpaRepository<CharacterEntity, Long> {
+-    @Query("""
+-        SELECT n.character
+-        FROM CharacterName n
+-        WHERE n.name = :name
+-          AND (
+-               n.active = true
+-               OR (n.active = false AND n.inactiveDate > :cutoff)
+-          )
+-        """)
+-    Optional<CharacterEntity> findByAnyName(String name, Instant cutoff);
++    @Query(value = """
++        select c.*
++          from characters c
++          join character_names n on n.character_id = c.id
++         where lower(n.name) = lower(:name)
++           and (
++                n.active is true
++                or (n.active is false and n.inactive_date > :cutoff)
++           )
++         order by n.active desc, n.inactive_date desc nulls first, n.id desc
++         limit 1
++        """, nativeQuery = true)
++    Optional<CharacterEntity> findByAnyName(@Param("name") String name, @Param("cutoff") Instant cutoff);
+ }
++
+ interface CharacterNameJpa extends JpaRepository<CharacterName, Long> {
+-    Optional<CharacterName> findByNameAndActiveTrue(String name);
++    @Query(value = """
++        select *
++          from character_names
++         where lower(name) = lower(:name)
++           and active is true
++         order by id desc
++         limit 1
++        """, nativeQuery = true)
++    Optional<CharacterName> findByNameAndActiveTrue(@Param("name") String name);
+ 
+     @Query("select cn from CharacterName cn where cn.character.id = :charId and cn.active=true")
+     Optional<CharacterName> findCharacterActiveName(Long charId);
+ 
+-    @Query("select cn from CharacterName cn where cn.name = :name")
+-    Optional<CharacterName> findName(String name);
++    @Query(value = """
++        select *
++          from character_names
++         where lower(name) = lower(:name)
++         order by active desc, inactive_date desc nulls first, id desc
++        """, nativeQuery = true)
++    List<CharacterName> findAllByNormalizedName(@Param("name") String name);
++
++    @Query(value = """
++        select *
++          from character_names
++         where lower(name) = lower(:name)
++         order by active desc, inactive_date desc nulls first, id desc
++         limit 1
++        """, nativeQuery = true)
++    Optional<CharacterName> findName(@Param("name") String name);
++
++    @Query(value = """
++        select *
++          from character_names
++         where character_id = :characterId
++           and lower(name) = lower(:name)
++         order by active desc, inactive_date desc nulls first, id desc
++         limit 1
++        """, nativeQuery = true)
++    Optional<CharacterName> findNameForCharacter(@Param("characterId") Long characterId, @Param("name") String name);
++
++    @Query(value = """
++        select *
++          from character_names
++         where character_id = :characterId
++         order by active desc, inactive_date desc nulls first, id desc
++        """, nativeQuery = true)
++    List<CharacterName> findNamesForCharacter(@Param("characterId") Long characterId);
+ }
++
+ interface CharacterStatJpa extends JpaRepository<CharacterStatRecord, Long> {
+     @Query("select r from CharacterStatRecord r where r.character = :c and r.category = :cat order by r.date asc")
+     List<CharacterStatRecord> findByCat(CharacterEntity c, StatCategory cat);
+ }
+ 
++interface CharacterReferenceMaintenanceJpa extends JpaRepository<CharacterEntity, Long> {
++    @Modifying
++    @Transactional
++    @Query(value = "update scrape_players set character_id = :toId where character_id = :fromId", nativeQuery = true)
++    void reassignScrapePlayers(@Param("fromId") Long fromId, @Param("toId") Long toId);
++
++    @Modifying
++    @Transactional
++    @Query(value = "update character_worlds set character_id = :toId where character_id = :fromId", nativeQuery = true)
++    void reassignCharacterWorlds(@Param("fromId") Long fromId, @Param("toId") Long toId);
++
++    @Modifying
++    @Transactional
++    @Query(value = "update character_deaths set character_id = :toId where character_id = :fromId", nativeQuery = true)
++    void reassignCharacterDeaths(@Param("fromId") Long fromId, @Param("toId") Long toId);
++
++    @Modifying
++    @Transactional
++    @Query(value = "update guild_characters set character_id = :toId where character_id = :fromId", nativeQuery = true)
++    void reassignGuildCharacters(@Param("fromId") Long fromId, @Param("toId") Long toId);
++
++    @Modifying
++    @Transactional
++    @Query(value = "update character_statrecords set character_id = :toId where character_id = :fromId", nativeQuery = true)
++    void reassignCharacterStatRecords(@Param("fromId") Long fromId, @Param("toId") Long toId);
++
++    @Modifying
++    @Transactional
++    @Query(value = """
++        update character_names source
++           set character_id = :toId
++         where source.character_id = :fromId
++           and not exists (
++               select 1
++                 from character_names target
++                where target.character_id = :toId
++                  and lower(target.name) = lower(source.name)
++           )
++        """, nativeQuery = true)
++    void reassignNonDuplicateCharacterNames(@Param("fromId") Long fromId, @Param("toId") Long toId);
++
++    @Modifying
++    @Transactional
++    @Query(value = "delete from character_names where character_id = :fromId", nativeQuery = true)
++    void deleteRemainingCharacterNames(@Param("fromId") Long fromId);
++
++    @Modifying
++    @Transactional
++    @Query(value = "delete from characters where id = :characterId", nativeQuery = true)
++    void deleteCharacter(@Param("characterId") Long characterId);
++}
++
+ @Repository
+ public class SpringCharacterRepository implements CharacterRepositoryPort {
+     private final CharacterNameJpa names;
+     private final CharacterJpa chars;
+     private final CharacterStatJpa stats;
++    private final CharacterReferenceMaintenanceJpa maintenance;
+ 
+-    public SpringCharacterRepository(CharacterNameJpa names, CharacterJpa chars, CharacterStatJpa stats) {
++    public SpringCharacterRepository(CharacterNameJpa names,
++                                     CharacterJpa chars,
++                                     CharacterStatJpa stats,
++                                     CharacterReferenceMaintenanceJpa maintenance) {
+         this.names = names;
+         this.chars = chars;
+         this.stats = stats;
++        this.maintenance = maintenance;
+     }
+ 
+     public CharacterName saveName(CharacterName name){
+@@ -57,6 +163,21 @@ public class SpringCharacterRepository implements CharacterRepositoryPort {
+         return names.findName(name);
+     }
+ 
++    @Override
++    public List<CharacterName> findNames(String name) {
++        return names.findAllByNormalizedName(name);
++    }
++
++    @Override
++    public Optional<CharacterName> findNameForCharacter(Long characterId, String name) {
++        return names.findNameForCharacter(characterId, name);
++    }
++
++    @Override
++    public List<CharacterName> findNamesForCharacter(Long characterId) {
++        return names.findNamesForCharacter(characterId);
++    }
++
+     @Override
+     public Optional<CharacterName> findCharacterActiveName(Long id) {
+         return names.findCharacterActiveName(id);
+@@ -76,10 +197,12 @@ public class SpringCharacterRepository implements CharacterRepositoryPort {
+     public CharacterEntity save(CharacterEntity c){
+         return chars.save(c);
+     }
++
+     @Override
+     public CharacterStatRecord saveStat(CharacterStatRecord r){
+         return stats.save(r);
+     }
++
+     @Override
+     public List<CharacterStatRecord> findStatsBy(CharacterEntity c, StatCategory category){
+         return stats.findByCat(c, category);
+@@ -89,4 +212,26 @@ public class SpringCharacterRepository implements CharacterRepositoryPort {
+     public Optional<CharacterName> findActiveName(String name) {
+         return names.findByNameAndActiveTrue(name);
+     }
+-}
+\ No newline at end of file
++
++    @Override
++    @Transactional
++    public void mergeCharacterReferences(Long fromCharacterId, Long toCharacterId) {
++        if (fromCharacterId == null || toCharacterId == null || fromCharacterId.equals(toCharacterId)) {
++            return;
++        }
++
++        maintenance.reassignScrapePlayers(fromCharacterId, toCharacterId);
++        maintenance.reassignCharacterWorlds(fromCharacterId, toCharacterId);
++        maintenance.reassignCharacterDeaths(fromCharacterId, toCharacterId);
++        maintenance.reassignGuildCharacters(fromCharacterId, toCharacterId);
++        maintenance.reassignCharacterStatRecords(fromCharacterId, toCharacterId);
++        maintenance.reassignNonDuplicateCharacterNames(fromCharacterId, toCharacterId);
++        maintenance.deleteRemainingCharacterNames(fromCharacterId);
++    }
++
++    @Override
++    @Transactional
++    public void deleteCharacter(Long characterId) {
++        maintenance.deleteCharacter(characterId);
++    }
++}

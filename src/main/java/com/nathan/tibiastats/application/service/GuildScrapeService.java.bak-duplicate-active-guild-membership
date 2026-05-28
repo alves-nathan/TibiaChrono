@@ -1,0 +1,405 @@
+package com.nathan.tibiastats.application.service;
+
+import com.nathan.tibiastats.config.GuildScrapeProperties;
+import com.nathan.tibiastats.domain.model.*;
+import com.nathan.tibiastats.domain.port.GuildScrapePort;
+import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
+import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class GuildScrapeService {
+    private static final Logger log = LoggerFactory.getLogger(GuildScrapeService.class);
+    private static final String LOG_PREFIX = "[GUILD_SCRAPER]";
+
+    private final GuildScrapePort scraper;
+    private final SpringGuildRepository guilds;
+    private final WorldRepositoryPort worlds;
+    private final CharacterNamingService characterNamingService;
+    private final com.nathan.tibiastats.domain.port.CharacterRepositoryPort characters;
+    private final GuildScrapeProperties properties;
+    private final Clock clock;
+
+    @Autowired
+    public GuildScrapeService(GuildScrapePort scraper,
+                              SpringGuildRepository guilds,
+                              WorldRepositoryPort worlds,
+                              CharacterNamingService characterNamingService,
+                              com.nathan.tibiastats.domain.port.CharacterRepositoryPort characters,
+                              GuildScrapeProperties properties) {
+        this(scraper, guilds, worlds, characterNamingService, characters, properties, Clock.systemUTC());
+    }
+
+    GuildScrapeService(GuildScrapePort scraper,
+                       SpringGuildRepository guilds,
+                       WorldRepositoryPort worlds,
+                       CharacterNamingService characterNamingService,
+                       com.nathan.tibiastats.domain.port.CharacterRepositoryPort characters,
+                       GuildScrapeProperties properties,
+                       Clock clock) {
+        this.scraper = scraper;
+        this.guilds = guilds;
+        this.worlds = worlds;
+        this.characterNamingService = characterNamingService;
+        this.characters = characters;
+        this.properties = properties;
+        this.clock = clock;
+    }
+
+    public ScrapeJobResult updateKnownGuilds() {
+        int processed = 0;
+        int created = 0;
+        int updated = 0;
+        int failed = 0;
+
+        if (properties.isListEnabled()) {
+            List<World> allWorlds = worlds.findAll();
+            if (properties.getWorldLimit() > 0 && allWorlds.size() > properties.getWorldLimit()) {
+                allWorlds = allWorlds.subList(0, properties.getWorldLimit());
+            }
+
+            for (World world : allWorlds) {
+                try {
+                    GuildListResult result = updateGuildListForWorld(world.getName());
+                    processed += result.processed();
+                    created += result.created();
+                    updated += result.updated();
+                    sleepBetweenPages();
+                } catch (Exception e) {
+                    failed++;
+                    log.warn("{} Failed to update guild list for world={}: {}", LOG_PREFIX, world.getName(), e.getMessage());
+                }
+            }
+        }
+
+        if (properties.isDetailsEnabled()) {
+            for (Guild guild : guilds.findActiveForDetailsRefresh(properties.getGuildLimit())) {
+                try {
+                    GuildDetailResult result = updateGuildDetail(guild.getName());
+                    processed += result.membersSeen();
+                    created += result.membershipsOpened();
+                    updated += result.membershipsUpdated() + result.membershipsClosed();
+                    sleepBetweenPages();
+                } catch (Exception e) {
+                    failed++;
+                    log.warn("{} Failed to update guild detail for guild={}: {}", LOG_PREFIX, guild.getName(), e.getMessage());
+                }
+            }
+        }
+
+        return ScrapeJobResult.of(processed, created, updated, failed);
+    }
+
+    @Transactional
+    public GuildListResult updateGuildListForWorld(String worldName) {
+        Instant observedAt = clock.instant();
+        World world = ensureWorld(worldName);
+        int processed = 0;
+        int created = 0;
+        int updated = 0;
+
+        for (GuildScrapePort.GuildListItem item : scraper.fetchGuildList(worldName)) {
+            if (isBlank(item.name())) continue;
+            processed++;
+            UpsertResult result = upsertGuild(item.name(), item.worldName(), item.description(), null, null, null, item.active(), observedAt);
+            if (result.created()) created++; else updated++;
+            Guild guild = result.guild();
+            if (guild.getWorld() == null) guild.setWorld(world);
+            guilds.saveGuild(guild);
+        }
+
+        log.info("{} Guild list updated: world={}, processed={}, created={}, updated={}", LOG_PREFIX, worldName, processed, created, updated);
+        return new GuildListResult(processed, created, updated);
+    }
+
+    @Transactional
+    public GuildDetailResult updateGuildDetail(String guildName) {
+        Instant observedAt = clock.instant();
+        GuildScrapePort.GuildDetail detail = scraper.fetchGuildDetail(guildName);
+        if (isBlank(detail.name())) {
+            throw new IllegalStateException("Guild detail did not contain a guild name for '" + guildName + "'");
+        }
+
+        UpsertResult result = upsertGuild(
+                detail.name(),
+                detail.worldName(),
+                detail.description(),
+                detail.homepage(),
+                detail.logoUrl(),
+                detail.foundedAt(),
+                true,
+                observedAt
+        );
+        Guild guild = result.guild();
+        guild.setLastScrapedAt(observedAt);
+        guilds.saveGuild(guild);
+
+        saveSnapshot(guild, detail, observedAt);
+
+        Map<Long, GuildMembership> activeBefore = guilds.findActiveMemberships(guild).stream()
+                .filter(m -> m.getCharacter() != null && m.getCharacter().getId() != null)
+                .collect(Collectors.toMap(m -> m.getCharacter().getId(), m -> m, (a, b) -> a, LinkedHashMap::new));
+
+        Set<Long> seenCharacterIds = new LinkedHashSet<>();
+        int opened = 0;
+        int updated = 0;
+        int closed = 0;
+        int transfers = 0;
+
+        for (GuildScrapePort.Member member : nullSafe(detail.members())) {
+            if (isBlank(member.name())) continue;
+
+            CharacterEntity character = characterNamingService.resolveObservedName(member.name());
+            updateCharacterSnapshot(character, member);
+            Long characterId = character.getId();
+            seenCharacterIds.add(characterId);
+
+            Optional<GuildMembership> currentActive = guilds.findActiveMembershipForCharacter(characterId);
+            if (currentActive.isEmpty()) {
+                GuildMembership membership = openMembership(guild, character, member, observedAt);
+                guilds.saveMembership(membership);
+                saveEvent(character, member.name(), GuildMembershipEventType.JOINED, null, guild, observedAt,
+                        "Observed character joining guild " + guild.getName());
+                opened++;
+                continue;
+            }
+
+            GuildMembership active = currentActive.get();
+            if (active.getGuild().getId().equals(guild.getId())) {
+                refreshMembership(active, member, observedAt);
+                guilds.saveMembership(active);
+                updated++;
+            } else {
+                Guild previousGuild = active.getGuild();
+                closeMembership(active, observedAt);
+                guilds.saveMembership(active);
+
+                GuildMembership membership = openMembership(guild, character, member, observedAt);
+                guilds.saveMembership(membership);
+                saveEvent(character, member.name(), GuildMembershipEventType.TRANSFERRED, previousGuild, guild, observedAt,
+                        "Observed character transfer from " + previousGuild.getName() + " to " + guild.getName());
+                transfers++;
+                opened++;
+                closed++;
+            }
+        }
+
+        for (GuildMembership membership : activeBefore.values()) {
+            if (membership.getCharacter() == null || membership.getCharacter().getId() == null) continue;
+            if (seenCharacterIds.contains(membership.getCharacter().getId())) continue;
+
+            closeMembership(membership, observedAt);
+            guilds.saveMembership(membership);
+            saveEvent(membership.getCharacter(), membership.getCharacterNameSnapshot(), GuildMembershipEventType.LEFT, guild, null, observedAt,
+                    "Observed character leaving guild " + guild.getName());
+            closed++;
+        }
+
+        updateInvites(guild, detail, observedAt);
+
+        log.info("{} Guild detail updated: guild={}, membersSeen={}, opened={}, updated={}, closed={}, transfers={}",
+                LOG_PREFIX, guild.getName(), nullSafe(detail.members()).size(), opened, updated, closed, transfers);
+
+        return new GuildDetailResult(guild.getName(), nullSafe(detail.members()).size(), opened, updated, closed, transfers);
+    }
+
+    private UpsertResult upsertGuild(String name,
+                                     String worldName,
+                                     String description,
+                                     String homepage,
+                                     String logoUrl,
+                                     java.time.LocalDate foundedAt,
+                                     boolean active,
+                                     Instant observedAt) {
+        String normalizedName = SpringGuildRepository.normalizeGuildName(name);
+        Guild guild = guilds.findGuild(name).orElseGet(Guild::new);
+        boolean created = guild.getId() == null;
+
+        guild.setName(normalizeDisplayName(name));
+        guild.setNormalizedName(normalizedName);
+        guild.setWorld(ensureWorld(firstNonBlank(worldName, guild.getWorld() == null ? null : guild.getWorld().getName())));
+        if (!isBlank(description)) guild.setDescription(description.trim());
+        if (!isBlank(homepage)) guild.setHomepage(homepage.trim());
+        if (logoUrl != null) {
+            guild.setLogoUrl(blankToNull(logoUrl));
+        } else if (isKnownInvalidGuildLogo(guild.getLogoUrl())) {
+            guild.setLogoUrl(null);
+        }
+        if (foundedAt != null) guild.setFoundedAt(foundedAt);
+        guild.setActive(active);
+        guild.setLastSeenAt(observedAt);
+
+        return new UpsertResult(guilds.saveGuild(guild), created);
+    }
+
+    private World ensureWorld(String worldName) {
+        String value = firstNonBlank(worldName, "Unknown");
+        return worlds.findByName(value).orElseGet(() -> worlds.save(new World(value, null, null)));
+    }
+
+    private void saveSnapshot(Guild guild, GuildScrapePort.GuildDetail detail, Instant observedAt) {
+        GuildSnapshot snapshot = new GuildSnapshot();
+        snapshot.setGuild(guild);
+        snapshot.setScrapedAt(observedAt);
+        snapshot.setMemberCount(detail.memberCount());
+        snapshot.setOnlineCount(detail.onlineCount());
+        snapshot.setRawHash(detail.rawHash());
+        guilds.saveSnapshot(snapshot);
+    }
+
+    private GuildMembership openMembership(Guild guild, CharacterEntity character, GuildScrapePort.Member member, Instant observedAt) {
+        GuildMembership membership = new GuildMembership();
+        membership.setGuild(guild);
+        membership.setCharacter(character);
+        membership.setCharacterNameSnapshot(normalizeDisplayName(member.name()));
+        membership.setRankName(blankToNull(member.rankName()));
+        membership.setTitle(blankToNull(member.title()));
+        membership.setVocation(blankToNull(member.vocation()));
+        membership.setLevel(member.level());
+        membership.setJoinedOn(member.joinedOn());
+        membership.setJoinedAt(toMembershipJoinedAt(member, observedAt));
+        membership.setFirstSeenAt(observedAt);
+        membership.setLastSeenAt(observedAt);
+        membership.setActive(true);
+        return membership;
+    }
+
+    private void refreshMembership(GuildMembership membership, GuildScrapePort.Member member, Instant observedAt) {
+        membership.setCharacterNameSnapshot(normalizeDisplayName(member.name()));
+        membership.setRankName(blankToNull(member.rankName()));
+        membership.setTitle(blankToNull(member.title()));
+        membership.setVocation(blankToNull(member.vocation()));
+        membership.setLevel(member.level());
+        if (member.joinedOn() != null) {
+            membership.setJoinedOn(member.joinedOn());
+            membership.setJoinedAt(toMembershipJoinedAt(member, observedAt));
+        }
+        membership.setLastSeenAt(observedAt);
+        membership.setActive(true);
+        membership.setLeftAt(null);
+    }
+
+    private void closeMembership(GuildMembership membership, Instant observedAt) {
+        membership.setActive(false);
+        membership.setLeftAt(observedAt);
+        membership.setLastSeenAt(observedAt);
+    }
+
+    private void saveEvent(CharacterEntity character,
+                           String nameSnapshot,
+                           GuildMembershipEventType type,
+                           Guild fromGuild,
+                           Guild toGuild,
+                           Instant observedAt,
+                           String description) {
+        GuildMembershipEvent event = new GuildMembershipEvent();
+        event.setCharacter(character);
+        event.setCharacterNameSnapshot(normalizeDisplayName(nameSnapshot));
+        event.setEventType(type);
+        event.setFromGuild(fromGuild);
+        event.setToGuild(toGuild);
+        event.setObservedAt(observedAt);
+        event.setDescription(description);
+        guilds.saveEvent(event);
+    }
+
+    private void updateInvites(Guild guild, GuildScrapePort.GuildDetail detail, Instant observedAt) {
+        Set<String> seen = new HashSet<>();
+        for (GuildScrapePort.Invite invite : nullSafe(detail.invites())) {
+            if (isBlank(invite.characterName())) continue;
+            String normalized = invite.characterName().trim().toLowerCase(Locale.ROOT);
+            seen.add(normalized);
+            GuildInvite entity = guilds.findActiveInvite(guild.getId(), invite.characterName()).orElseGet(GuildInvite::new);
+            if (entity.getId() == null) {
+                entity.setGuild(guild);
+                entity.setCharacterName(normalizeDisplayName(invite.characterName()));
+                entity.setInvitedAt(invite.invitedAt());
+                entity.setFirstSeenAt(observedAt);
+            }
+            entity.setLastSeenAt(observedAt);
+            entity.setActive(true);
+            guilds.saveInvite(entity);
+        }
+
+        for (GuildInvite active : guilds.findActiveInvites(guild.getId())) {
+            if (!seen.contains(active.getCharacterName().trim().toLowerCase(Locale.ROOT))) {
+                active.setActive(false);
+                active.setLastSeenAt(observedAt);
+                guilds.saveInvite(active);
+            }
+        }
+    }
+
+    private void updateCharacterSnapshot(CharacterEntity character, GuildScrapePort.Member member) {
+        if (member.level() != null) character.setLevel(member.level());
+        if (!isBlank(member.vocation())) {
+            characters.findVocationByNameOrPromotionName(member.vocation()).ifPresent(character::setVocation);
+        }
+        characters.save(character);
+    }
+
+    private void sleepBetweenPages() {
+        int delayMs = properties.getPageDelayMs();
+        if (delayMs <= 0) return;
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+
+    private static Instant toMembershipJoinedAt(GuildScrapePort.Member member, Instant observedAt) {
+        if (member.joinedOn() == null) return observedAt;
+        return member.joinedOn().atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+    }
+
+    private static boolean isKnownInvalidGuildLogo(String logoUrl) {
+        if (isBlank(logoUrl)) return false;
+        String lower = logoUrl.toLowerCase(Locale.ROOT);
+        return lower.contains("headline-guilds.gif") || lower.contains("/strings/headline");
+    }
+
+    private static <T> List<T> nullSafe(List<T> list) {
+        return list == null ? List.of() : list;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static String blankToNull(String value) {
+        return isBlank(value) ? null : value.trim();
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (!isBlank(value)) return value.trim();
+        }
+        return "Unknown";
+    }
+
+    private static String normalizeDisplayName(String value) {
+        return value == null ? "" : value.replace('\u00a0', ' ').replaceAll("\\s+", " ").trim();
+    }
+
+    public record GuildListResult(int processed, int created, int updated) {}
+
+    public record GuildDetailResult(String guildName,
+                                    int membersSeen,
+                                    int membershipsOpened,
+                                    int membershipsUpdated,
+                                    int membershipsClosed,
+                                    int transfers) {}
+
+    private record UpsertResult(Guild guild, boolean created) {}
+}

@@ -51,6 +51,7 @@ public class HighscoreService {
     private final AtomicLong nextAllowedHttpRequestAtMs = new AtomicLong(0);
     private final AtomicLong lastCooldownLogAtMs = new AtomicLong(0);
     private final AtomicLong lastRetrySleepLogAtMs = new AtomicLong(0);
+    private final Object httpBackoffLock = new Object();
     private final Map<String, Object> nameLocks = new ConcurrentHashMap<>();
 
     public HighscoreService(
@@ -80,6 +81,10 @@ public class HighscoreService {
         }
         if (plan == null || !plan.isEnabled()) {
             log.info("[HIGHSCORE_SCRAPER] Skipping disabled highscore plan: plan={}", planName);
+            return;
+        }
+
+        if (isHttpBackoffActive(planName)) {
             return;
         }
 
@@ -123,7 +128,7 @@ public class HighscoreService {
         }
 
         log.info(
-                "[HIGHSCORE_SCRAPER] Starting run: plan={}, selectedScopes={}, scopesPerRun={}, allScopesPerRun={}, scopeWorkers={}, requestParallelism={}, pageWindowSize={}, maxPages={}, pageDelayMs={}, requestMaxAttempts={}, retryBaseDelayMs={}, retryMaxDelayMs={}, forbiddenCooldownMs={}, requestJitterMs={}, requestMinIntervalMs={}, cooldownLogIntervalMs={}, progressLogIntervalScopes={}, worlds={}, categories={}, vocations={}, abortRunOnForbidden={}",
+                "[HIGHSCORE_SCRAPER] Starting run: plan={}, selectedScopes={}, scopesPerRun={}, allScopesPerRun={}, scopeWorkers={}, requestParallelism={}, pageWindowSize={}, maxPages={}, pageDelayMs={}, requestMaxAttempts={}, retryBaseDelayMs={}, retryMaxDelayMs={}, forbiddenCooldownMs={}, forbiddenInitialCooldownMs={}, forbiddenMaxCooldownMs={}, forbiddenCooldownMultiplier={}, requestJitterMs={}, requestMinIntervalMs={}, cooldownLogIntervalMs={}, progressLogIntervalScopes={}, worlds={}, categories={}, vocations={}, abortRunOnForbidden={}",
                 planName,
                 scopes.size(),
                 plan.getScopesPerRun(),
@@ -137,6 +142,9 @@ public class HighscoreService {
                 plan.getRetryBaseDelayMs(),
                 plan.getRetryMaxDelayMs(),
                 plan.getForbiddenCooldownMs(),
+                plan.getForbiddenInitialCooldownMs(),
+                plan.getForbiddenMaxCooldownMs(),
+                plan.getForbiddenCooldownMultiplier(),
                 plan.getRequestJitterMs(),
                 plan.getRequestMinIntervalMs(),
                 plan.getCooldownLogIntervalMs(),
@@ -195,6 +203,10 @@ public class HighscoreService {
                     failed++;
                     log.error("[HIGHSCORE_SCRAPER] Unexpected highscore worker failure", ex);
                 }
+            }
+
+            if (!rateLimited.get() && (success > 0 || empty > 0)) {
+                resetHttpBackoffAfterSuccessfulRun(planName, success, empty);
             }
 
             log.info(
@@ -469,6 +481,44 @@ public class HighscoreService {
         return Normalizer.normalize(cleaned, Normalizer.Form.NFKC);
     }
 
+
+    private boolean isHttpBackoffActive(String planName) {
+        HighscoreScrapeStateRepository.HighscoreHttpBackoffState backoff = stateRepository.getHttpBackoffState();
+        Instant now = Instant.now();
+        if (backoff == null || !backoff.isActive(now)) {
+            return false;
+        }
+
+        long untilMs = backoff.cooldownUntil() == null ? 0L : backoff.cooldownUntil().toEpochMilli();
+        globalHttpCooldownUntilMs.getAndUpdate(value -> Math.max(value, untilMs));
+        log.warn(
+                "[HIGHSCORE_SCRAPER] Skipping highscore plan because global HTTP backoff is active: plan={}, remainingMs={}, cooldownUntil={}, consecutiveFailures={}, currentCooldownMs={}, lastReason={}",
+                planName,
+                backoff.remainingMs(now),
+                backoff.cooldownUntil(),
+                backoff.consecutiveFailures(),
+                backoff.currentCooldownMs(),
+                backoff.lastReason()
+        );
+        return true;
+    }
+
+    private void resetHttpBackoffAfterSuccessfulRun(String planName, int successScopes, int emptyScopes) {
+        HighscoreScrapeStateRepository.HighscoreHttpBackoffState backoff = stateRepository.getHttpBackoffState();
+        if (backoff == null || (backoff.consecutiveFailures() <= 0 && backoff.cooldownUntil() == null)) {
+            return;
+        }
+
+        stateRepository.resetHttpBackoffAfterSuccess();
+        globalHttpCooldownUntilMs.set(0);
+        log.info(
+                "[HIGHSCORE_SCRAPER] Global highscore HTTP backoff reset after successful run: plan={}, successScopes={}, emptyScopes={}",
+                planName,
+                successScopes,
+                emptyScopes
+        );
+    }
+
     private void throttleRequestWithJitter(HighscoreScrapeProperties.Plan plan) {
         int baseDelay = plan.getPageDelayMs();
         int jitter = plan.getRequestJitterMs();
@@ -522,17 +572,41 @@ public class HighscoreService {
     }
 
     private void activateGlobalHttpCooldown(HighscoreScrapeProperties.Plan plan, String reason) {
-        int cooldownMs = plan.getForbiddenCooldownMs();
-        if (cooldownMs <= 0) {
+        long initialCooldownMs = plan.getForbiddenInitialCooldownMs();
+        if (initialCooldownMs <= 0) {
             return;
         }
 
-        long until = System.currentTimeMillis() + cooldownMs;
-        long previous = globalHttpCooldownUntilMs.getAndUpdate(current -> Math.max(current, until));
-        if (until > previous) {
+        synchronized (httpBackoffLock) {
+            HighscoreScrapeStateRepository.HighscoreHttpBackoffState current = stateRepository.getHttpBackoffState();
+            Instant now = Instant.now();
+            if (current != null && current.isActive(now)) {
+                globalHttpCooldownUntilMs.getAndUpdate(value -> Math.max(value, current.cooldownUntil().toEpochMilli()));
+                log.warn(
+                        "[HIGHSCORE_SCRAPER] HTTP backoff already active after Tibia response. remainingMs={}, consecutiveFailures={}, currentCooldownMs={}, reason={}",
+                        current.remainingMs(now),
+                        current.consecutiveFailures(),
+                        current.currentCooldownMs(),
+                        reason
+                );
+                return;
+            }
+
+            HighscoreScrapeStateRepository.HighscoreHttpBackoffState backoff = stateRepository.activateHttpBackoff(
+                    initialCooldownMs,
+                    plan.getForbiddenMaxCooldownMs(),
+                    plan.getForbiddenCooldownMultiplier(),
+                    reason
+            );
+            long untilMs = backoff.cooldownUntil() == null ? 0L : backoff.cooldownUntil().toEpochMilli();
+            globalHttpCooldownUntilMs.getAndUpdate(value -> Math.max(value, untilMs));
             log.warn(
-                    "[HIGHSCORE_SCRAPER] HTTP cooldown activated for {}ms after Tibia response: {}",
-                    cooldownMs,
+                    "[HIGHSCORE_SCRAPER] Global highscore backoff activated. All highscore plans disabled until cooldown expires: cooldownMs={}, cooldownUntil={}, consecutiveFailures={}, maxCooldownMs={}, multiplier={}, reason={}",
+                    backoff.currentCooldownMs(),
+                    backoff.cooldownUntil(),
+                    backoff.consecutiveFailures(),
+                    plan.getForbiddenMaxCooldownMs(),
+                    plan.getForbiddenCooldownMultiplier(),
                     reason
             );
         }
@@ -583,7 +657,7 @@ public class HighscoreService {
         long delay = Math.min(max, exponential);
 
         if (isForbiddenOrRateLimited(ex)) {
-            delay = Math.max(delay, Math.min(max, plan.getForbiddenCooldownMs()));
+            delay = Math.max(delay, Math.min(max, plan.getForbiddenInitialCooldownMs()));
         }
 
         int jitter = plan.getRequestJitterMs();

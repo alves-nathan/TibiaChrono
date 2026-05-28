@@ -30,12 +30,23 @@ server:
 tibiastats:
   scrape:
     worlds:
+      enabled: true
       rate-ms: 60000
     character-details:
       enabled: true
-      rate-ms: 60000           # 1 min between small batches during dev
-      initial-delay-ms: 15000  # wait 15s after startup before first batch
-      batch-size: 50            # adjustable through TIBIASTATS_SCRAPE_CHARACTER_DETAILS_BATCH_SIZE
+      rate-ms: 60000
+      initial-delay-ms: 15000
+      batch-size: 50
+
+    guilds:
+      enabled: false
+      rate-ms: 3600000          # 1h
+      initial-delay-ms: 30000
+      world-limit: 0
+      guild-limit: 50
+      page-delay-ms: 750
+      list-enabled: true
+      details-enabled: true
     highscores:
       enabled: true
       cron: "0 0 7 * * *"
