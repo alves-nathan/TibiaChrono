@@ -22,3 +22,5 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0005 - Extract highscore HTTP backoff coordinator](adr/ADR-0005-extract-highscore-http-backoff-coordinator.md)
 
 - [ADR-0006 - Use HTML fixture characterization tests for scrapers](adr/ADR-0006-use-html-fixture-characterization-tests-for-scrapers.md)
+
+- [ADR-0007 - Keep ApiQueryService as a facade while splitting read models](adr/ADR-0007-keep-api-query-service-as-facade-while-splitting-read-models.md)
