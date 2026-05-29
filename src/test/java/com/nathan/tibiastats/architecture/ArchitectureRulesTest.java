@@ -81,6 +81,15 @@ class ArchitectureRulesTest {
             .and(NOT_READ_MODEL_MARKER)
             .should().beAnnotatedWith(ReadModelComponent.class);
 
+
+    @ArchTest
+    static final ArchRule api_query_service_should_remain_a_facade_without_direct_jdbc = noClasses()
+            .that().haveSimpleName("ApiQueryService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.springframework.jdbc..",
+                    "java.sql.."
+            );
+
     @ArchTest
     static final ArchRule write_side_application_services_should_not_use_spring_jdbc_directly = noClasses()
             .that().resideInAPackage("..application.service..")

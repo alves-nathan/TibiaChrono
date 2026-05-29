@@ -1,148 +1,51 @@
 package com.nathan.tibiastats.application.query;
 
 import com.nathan.tibiastats.domain.model.StatCategory;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.sql.Types;
-import java.time.ZoneOffset;
 
 @ReadModelService
 @ReadModelComponent
 public class ApiQueryService {
-    private final NamedParameterJdbcTemplate jdbc;
     private final CharacterOnlineReadModelService characterOnline;
     private final ScrapeJobReadModelService scrapeJobs;
+    private final WorldReadModelService worlds;
+    private final CharacterIdentityReadModelService characters;
+    private final LegacyHighscoreReadModelService legacyHighscores;
 
-    public ApiQueryService(JdbcTemplate jdbcTemplate,
-                           CharacterOnlineReadModelService characterOnline,
-                           ScrapeJobReadModelService scrapeJobs) {
-        this.jdbc = new NamedParameterJdbcTemplate(jdbcTemplate);
+    public ApiQueryService(CharacterOnlineReadModelService characterOnline,
+                           ScrapeJobReadModelService scrapeJobs,
+                           WorldReadModelService worlds,
+                           CharacterIdentityReadModelService characters,
+                           LegacyHighscoreReadModelService legacyHighscores) {
         this.characterOnline = characterOnline;
         this.scrapeJobs = scrapeJobs;
+        this.worlds = worlds;
+        this.characters = characters;
+        this.legacyHighscores = legacyHighscores;
     }
-
-    private static OffsetDateTime toSqlTimestamp(Instant instant) {
-        return instant == null ? null : OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
-    }
-
 
     public List<WorldView> findWorlds() {
-        return jdbc.query("""
-                select
-                    w.id,
-                    w.name,
-                    w.pvp_type,
-                    w.location,
-                    w.online_record,
-                    w.creation_date,
-                    w.transfer_type,
-                    w.game_world_type,
-                    latest.players_online,
-                    latest.scrape_time as last_scraped_at
-                from worlds w
-                left join lateral (
-                    select s.players_online, s.scrape_time
-                    from scrapes s
-                    where s.world_id = w.id
-                    order by s.scrape_time desc
-                    limit 1
-                ) latest on true
-                order by w.name
-                """, new MapSqlParameterSource(), this::mapWorld);
+        return worlds.findWorlds();
     }
 
     public Optional<WorldView> findWorld(String name) {
-        var params = new MapSqlParameterSource("name", name);
-        var result = jdbc.query("""
-                select
-                    w.id,
-                    w.name,
-                    w.pvp_type,
-                    w.location,
-                    w.online_record,
-                    w.creation_date,
-                    w.transfer_type,
-                    w.game_world_type,
-                    latest.players_online,
-                    latest.scrape_time as last_scraped_at
-                from worlds w
-                left join lateral (
-                    select s.players_online, s.scrape_time
-                    from scrapes s
-                    where s.world_id = w.id
-                    order by s.scrape_time desc
-                    limit 1
-                ) latest on true
-                where lower(w.name) = lower(:name)
-                limit 1
-                """, prepareParams(params), this::mapWorld);
-        return result.stream().findFirst();
+        return worlds.findWorld(name);
     }
 
     public Optional<CharacterView> findCharacter(String name) {
-        var params = new MapSqlParameterSource("name", name);
-        var result = jdbc.query("""
-                with resolved as (
-                    select lookup.character_id
-                    from character_names lookup
-                    where lower(lookup.name) = lower(:name)
-                      and (
-                          lookup.active is true
-                          or lookup.inactive_date >= now() - interval '6 months'
-                      )
-                    order by lookup.active desc, lookup.inactive_date desc nulls last
-                    limit 1
-                )
-                select
-                    c.id,
-                    active_name.name as active_name,
-                    c.level,
-                    c.sex,
-                    v.name as vocation,
-                    v.promotion_name as vocation_promotion_name,
-                    c.achievement_points,
-                    c.residence,
-                    c.last_login,
-                    c.acc_status,
-                    c.creation_date,
-                    c.details_last_scraped_at,
-                    c.details_last_scrape_status
-                from resolved r
-                join characters c on c.id = r.character_id
-                left join character_names active_name on active_name.character_id = c.id and active_name.active is true
-                left join vocations v on v.id = c.vocation_id
-                limit 1
-                """, prepareParams(params), this::mapCharacter);
-        return result.stream().findFirst();
+        return characters.findCharacter(name);
     }
 
     public List<CharacterNameView> findCharacterNames(String name) {
-        var character = findCharacter(name);
-        if (character.isEmpty()) {
-            return List.of();
-        }
-        return findCharacterNames(character.get().id());
+        return characters.findCharacterNames(name);
     }
 
     public List<CharacterNameView> findCharacterNames(Long characterId) {
-        var params = new MapSqlParameterSource("characterId", characterId);
-        return jdbc.query("""
-                select id, character_id, name, active, inactive_date
-                from character_names
-                where character_id = :characterId
-                order by active desc, inactive_date desc nulls first, name
-                """, prepareParams(params), this::mapCharacterName);
+        return characters.findCharacterNames(characterId);
     }
 
     public List<HighscoreView> findCharacterHighscores(String characterName,
@@ -152,40 +55,7 @@ public class ApiQueryService {
                                                        LocalDate from,
                                                        LocalDate to,
                                                        int limit) {
-        var sql = new StringBuilder("""
-                with resolved as (
-                    select lookup.character_id
-                    from character_names lookup
-                    where lower(lookup.name) = lower(:characterName)
-                      and (
-                          lookup.active is true
-                          or lookup.inactive_date >= now() - interval '6 months'
-                      )
-                    order by lookup.active desc, lookup.inactive_date desc nulls last
-                    limit 1
-                )
-                select
-                    csr.id,
-                    csr.rank,
-                    active_name.name as character_name,
-                    csr.character_id,
-                    w.name as world,
-                    csr.category,
-                    csr.vocation_filter_id,
-                    csr.date,
-                    csr.value,
-                    csr.scraped_at
-                from character_statrecords csr
-                join resolved r on r.character_id = csr.character_id
-                join worlds w on w.id = csr.world_id
-                left join character_names active_name on active_name.character_id = csr.character_id and active_name.active is true
-                where 1 = 1
-                """);
-        var params = new MapSqlParameterSource("characterName", characterName)
-                .addValue("limit", safeLimit(limit));
-        appendHighscoreFilters(sql, params, category, world, vocationFilterId, from, to, null);
-        sql.append(" order by csr.date desc, w.name, csr.category, csr.vocation_filter_id, csr.rank limit :limit");
-        return jdbc.query(sql.toString(), prepareParams(params), this::mapHighscore);
+        return legacyHighscores.findCharacterHighscores(characterName, category, world, vocationFilterId, from, to, limit);
     }
 
     public List<HighscoreView> findHighscores(String world,
@@ -193,27 +63,7 @@ public class ApiQueryService {
                                               Integer vocationFilterId,
                                               LocalDate date,
                                               int limit) {
-        var sql = new StringBuilder("""
-                select
-                    csr.id,
-                    csr.rank,
-                    active_name.name as character_name,
-                    csr.character_id,
-                    w.name as world,
-                    csr.category,
-                    csr.vocation_filter_id,
-                    csr.date,
-                    csr.value,
-                    csr.scraped_at
-                from character_statrecords csr
-                join worlds w on w.id = csr.world_id
-                left join character_names active_name on active_name.character_id = csr.character_id and active_name.active is true
-                where 1 = 1
-                """);
-        var params = new MapSqlParameterSource("limit", safeLimit(limit));
-        appendHighscoreFilters(sql, params, category, world, vocationFilterId, null, null, date);
-        sql.append(" order by csr.date desc, csr.rank asc limit :limit");
-        return jdbc.query(sql.toString(), prepareParams(params), this::mapHighscore);
+        return legacyHighscores.findHighscores(world, category, vocationFilterId, date, limit);
     }
 
     public List<ScrapeJobView> findScrapeJobs(String jobName, String status, int limit) {
@@ -249,150 +99,6 @@ public class ApiQueryService {
     }
 
 
-
-    private void appendHighscoreFilters(StringBuilder sql,
-                                        MapSqlParameterSource params,
-                                        StatCategory category,
-                                        String world,
-                                        Integer vocationFilterId,
-                                        LocalDate from,
-                                        LocalDate to,
-                                        LocalDate exactDate) {
-        if (category != null) {
-            sql.append(" and csr.category = :category");
-            params.addValue("category", category.name());
-        }
-        if (world != null && !world.isBlank()) {
-            sql.append(" and lower(w.name) = lower(:world)");
-            params.addValue("world", world.trim());
-        }
-        if (vocationFilterId != null) {
-            sql.append(" and csr.vocation_filter_id = :vocationFilterId");
-            params.addValue("vocationFilterId", vocationFilterId);
-        }
-        if (from != null) {
-            sql.append(" and csr.date >= :fromDate");
-            params.addValue("fromDate", from);
-        }
-        if (to != null) {
-            sql.append(" and csr.date <= :toDate");
-            params.addValue("toDate", to);
-        }
-        if (exactDate != null) {
-            sql.append(" and csr.date = :exactDate");
-            params.addValue("exactDate", exactDate);
-        }
-    }
-
-
-
-
-
-    private MapSqlParameterSource prepareParams(MapSqlParameterSource params) {
-        if (params == null) {
-            return new MapSqlParameterSource();
-        }
-
-        for (var entry : new ArrayList<>(params.getValues().entrySet())) {
-            if (entry.getValue() instanceof Instant instant) {
-                params.addValue(entry.getKey(), Timestamp.from(instant), Types.TIMESTAMP);
-            }
-        }
-
-        return params;
-    }
-
-    private int safeLimit(int requested) {
-        if (requested <= 0) {
-            return 100;
-        }
-        return Math.min(requested, 1000);
-    }
-
-    private WorldView mapWorld(ResultSet rs, int rowNum) throws SQLException {
-        return new WorldView(
-                rs.getInt("id"),
-                rs.getString("name"),
-                rs.getString("pvp_type"),
-                rs.getString("location"),
-                rs.getString("online_record"),
-                rs.getObject("creation_date", LocalDate.class),
-                rs.getString("transfer_type"),
-                rs.getString("game_world_type"),
-                getNullableInteger(rs, "players_online"),
-                toInstant(rs.getTimestamp("last_scraped_at"))
-        );
-    }
-
-    private CharacterView mapCharacter(ResultSet rs, int rowNum) throws SQLException {
-        return new CharacterView(
-                rs.getLong("id"),
-                rs.getString("active_name"),
-                getNullableInteger(rs, "level"),
-                rs.getString("sex"),
-                rs.getString("vocation"),
-                rs.getString("vocation_promotion_name"),
-                getNullableInteger(rs, "achievement_points"),
-                rs.getString("residence"),
-                rs.getObject("last_login", OffsetDateTime.class),
-                rs.getString("acc_status"),
-                toInstant(rs.getTimestamp("creation_date")),
-                toInstant(rs.getTimestamp("details_last_scraped_at")),
-                rs.getString("details_last_scrape_status")
-        );
-    }
-
-    private CharacterNameView mapCharacterName(ResultSet rs, int rowNum) throws SQLException {
-        return new CharacterNameView(
-                rs.getLong("id"),
-                rs.getLong("character_id"),
-                rs.getString("name"),
-                rs.getBoolean("active"),
-                toInstant(rs.getTimestamp("inactive_date"))
-        );
-    }
-
-    private HighscoreView mapHighscore(ResultSet rs, int rowNum) throws SQLException {
-        Long value = rs.getLong("value");
-        if (rs.wasNull()) {
-            value = null;
-        }
-        return new HighscoreView(
-                rs.getLong("id"),
-                getNullableInteger(rs, "rank"),
-                rs.getString("character_name"),
-                rs.getLong("character_id"),
-                rs.getString("world"),
-                rs.getString("category"),
-                getNullableInteger(rs, "vocation_filter_id"),
-                rs.getObject("date", LocalDate.class),
-                value,
-                toInstant(rs.getTimestamp("scraped_at"))
-        );
-    }
-
-
-
-
-
-
-
-
-
-
-    private Instant toInstant(Timestamp timestamp) {
-        return timestamp == null ? null : timestamp.toInstant();
-    }
-
-    private Integer getNullableInteger(ResultSet rs, String column) throws SQLException {
-        int value = rs.getInt(column);
-        return rs.wasNull() ? null : value;
-    }
-
-    private Long getNullableLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? null : value;
-    }
 
     public record WorldView(
             Integer id,
