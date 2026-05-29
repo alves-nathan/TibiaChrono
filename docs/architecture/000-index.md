@@ -25,3 +25,7 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 
 - [ADR-0007 - Keep ApiQueryService as a facade while splitting read models](adr/ADR-0007-keep-api-query-service-as-facade-while-splitting-read-models.md)
 - [ADR-0008: Keep ApiQueryService as an incremental read-model facade](adr/ADR-0008-api-query-service-as-incremental-read-model-facade.md)
+
+## Architecture Decision Records
+
+- [ADR-0009 - Split highscore orchestration helpers out of HighscoreService](adr/ADR-0009-highscore-orchestration-service-split.md)

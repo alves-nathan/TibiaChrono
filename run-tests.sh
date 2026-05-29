@@ -33,6 +33,7 @@ Default behavior:
   - Copies the source tree to .test-maven/workspace and runs Maven there.
   - Test reports/classes are written under .test-maven/workspace/target.
   - Maven dependencies are cached under .test-maven/m2.
+  - Local patch scripts under ./patches are not copied to the isolated Maven workspace.
 
 Useful env overrides:
   TEST_MAVEN_IMAGE=maven:3.9.9-eclipse-temurin-21
@@ -118,6 +119,8 @@ prepare_dockerized_workspace() {
     --exclude="./$TEST_WORK_DIR" \
     --exclude='./.git' \
     --exclude='./.idea' \
+    --exclude='./patches' \
+    --exclude='./patches/**' \
     --exclude='./*.log' \
     -cf - . | tar -xf - -C "$workspace_dir"
 }
