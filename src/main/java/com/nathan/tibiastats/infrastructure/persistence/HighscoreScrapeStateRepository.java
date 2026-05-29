@@ -1,8 +1,10 @@
 package com.nathan.tibiastats.infrastructure.persistence;
 
-import com.nathan.tibiastats.application.service.HighscoreScope;
+import com.nathan.tibiastats.domain.model.HighscoreHttpBackoffState;
+import com.nathan.tibiastats.domain.model.HighscoreScope;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.domain.model.World;
+import com.nathan.tibiastats.domain.port.HighscoreScrapeStateRepositoryPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -15,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 @Repository
-public class HighscoreScrapeStateRepository {
+public class HighscoreScrapeStateRepository implements HighscoreScrapeStateRepositoryPort {
     private final JdbcTemplate jdbc;
 
     public HighscoreScrapeStateRepository(JdbcTemplate jdbc) {
@@ -226,26 +228,5 @@ public class HighscoreScrapeStateRepository {
             return null;
         }
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    public record HighscoreHttpBackoffState(
-            Instant cooldownUntil,
-            int consecutiveFailures,
-            long currentCooldownMs,
-            String lastStatus,
-            String lastReason,
-            Instant lastFailureAt,
-            Instant lastSuccessAt
-    ) {
-        public boolean isActive(Instant now) {
-            return cooldownUntil != null && cooldownUntil.isAfter(now);
-        }
-
-        public long remainingMs(Instant now) {
-            if (!isActive(now)) {
-                return 0L;
-            }
-            return Math.max(0L, java.time.Duration.between(now, cooldownUntil).toMillis());
-        }
     }
 }

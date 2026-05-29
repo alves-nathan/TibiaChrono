@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.application.service;
 
-import com.nathan.tibiastats.infrastructure.persistence.HighscoreScrapeStateRepository;
+import com.nathan.tibiastats.domain.model.HighscoreHttpBackoffState;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -8,7 +8,7 @@ import java.time.Instant;
 @Component
 public class HighscoreBackoffStatusMapper {
     public AdminScraperService.HighscoreBackoffStatus toBackoffStatus(
-            HighscoreScrapeStateRepository.HighscoreHttpBackoffState state
+            HighscoreHttpBackoffState state
     ) {
         Instant now = Instant.now();
         if (state == null) {

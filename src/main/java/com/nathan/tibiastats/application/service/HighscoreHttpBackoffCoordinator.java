@@ -1,7 +1,8 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
-import com.nathan.tibiastats.infrastructure.persistence.HighscoreScrapeStateRepository;
+import com.nathan.tibiastats.domain.model.HighscoreHttpBackoffState;
+import com.nathan.tibiastats.domain.port.HighscoreScrapeStateRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,20 +14,20 @@ import java.util.concurrent.atomic.AtomicLong;
 public class HighscoreHttpBackoffCoordinator {
     private static final Logger log = LoggerFactory.getLogger(HighscoreHttpBackoffCoordinator.class);
 
-    private final HighscoreScrapeStateRepository stateRepository;
+    private final HighscoreScrapeStateRepositoryPort stateRepository;
     private final AtomicLong globalHttpCooldownUntilMs = new AtomicLong(0);
     private final AtomicLong lastCooldownLogAtMs = new AtomicLong(0);
     private final Object httpBackoffLock = new Object();
 
-    public HighscoreHttpBackoffCoordinator(HighscoreScrapeStateRepository stateRepository) {
+    public HighscoreHttpBackoffCoordinator(HighscoreScrapeStateRepositoryPort stateRepository) {
         this.stateRepository = stateRepository;
     }
 
-    public HighscoreScrapeStateRepository.HighscoreHttpBackoffState getState() {
+    public HighscoreHttpBackoffState getState() {
         return stateRepository.getHttpBackoffState();
     }
 
-    public HighscoreScrapeStateRepository.HighscoreHttpBackoffState resetManually() {
+    public HighscoreHttpBackoffState resetManually() {
         stateRepository.resetHttpBackoffAfterSuccess();
         globalHttpCooldownUntilMs.set(0);
         lastCooldownLogAtMs.set(0);
@@ -34,7 +35,7 @@ public class HighscoreHttpBackoffCoordinator {
     }
 
     public boolean isActive(String planName) {
-        HighscoreScrapeStateRepository.HighscoreHttpBackoffState backoff = stateRepository.getHttpBackoffState();
+        HighscoreHttpBackoffState backoff = stateRepository.getHttpBackoffState();
         Instant now = Instant.now();
         if (backoff == null || !backoff.isActive(now)) {
             return false;
@@ -55,7 +56,7 @@ public class HighscoreHttpBackoffCoordinator {
     }
 
     public void resetAfterSuccessfulRun(String planName, int successScopes, int emptyScopes) {
-        HighscoreScrapeStateRepository.HighscoreHttpBackoffState backoff = stateRepository.getHttpBackoffState();
+        HighscoreHttpBackoffState backoff = stateRepository.getHttpBackoffState();
         if (backoff == null || (backoff.consecutiveFailures() <= 0 && backoff.cooldownUntil() == null)) {
             return;
         }
@@ -90,7 +91,7 @@ public class HighscoreHttpBackoffCoordinator {
         }
 
         synchronized (httpBackoffLock) {
-            HighscoreScrapeStateRepository.HighscoreHttpBackoffState current = stateRepository.getHttpBackoffState();
+            HighscoreHttpBackoffState current = stateRepository.getHttpBackoffState();
             Instant now = Instant.now();
             if (current != null && current.isActive(now)) {
                 globalHttpCooldownUntilMs.getAndUpdate(value -> Math.max(value, current.cooldownUntil().toEpochMilli()));
@@ -104,7 +105,7 @@ public class HighscoreHttpBackoffCoordinator {
                 return;
             }
 
-            HighscoreScrapeStateRepository.HighscoreHttpBackoffState backoff = stateRepository.activateHttpBackoff(
+            HighscoreHttpBackoffState backoff = stateRepository.activateHttpBackoff(
                     initialCooldownMs,
                     plan.getForbiddenMaxCooldownMs(),
                     plan.getForbiddenCooldownMultiplier(),

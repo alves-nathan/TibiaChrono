@@ -1,8 +1,9 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
-import com.nathan.tibiastats.infrastructure.persistence.HighscoreScrapeStateRepository;
-import com.nathan.tibiastats.infrastructure.persistence.HighscoreStatRecordWriter;
+import com.nathan.tibiastats.domain.model.HighscoreHttpBackoffState;
+import com.nathan.tibiastats.domain.model.HighscoreScope;
+import com.nathan.tibiastats.domain.model.HighscoreStatRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -32,10 +33,10 @@ public class HighscoreService {
     private final HighscoreScopePlanner scopePlanner;
     private final HighscoreCharacterResolver characterResolver;
     private final HighscoreScrapeProperties properties;
-    private final HighscoreScrapeStateRepository stateRepository;
+    private final HighscoreScopeStateService scopeStateService;
     private final HighscoreHttpBackoffCoordinator httpBackoffCoordinator;
     private final HighscoreFetchRetryPolicy retryPolicy;
-    private final HighscoreStatRecordWriter statRecordWriter;
+    private final HighscoreStatStorageService statStorageService;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public HighscoreService(
@@ -43,19 +44,19 @@ public class HighscoreService {
             HighscoreScopePlanner scopePlanner,
             HighscoreCharacterResolver characterResolver,
             HighscoreScrapeProperties properties,
-            HighscoreScrapeStateRepository stateRepository,
+            HighscoreScopeStateService scopeStateService,
             HighscoreHttpBackoffCoordinator httpBackoffCoordinator,
             HighscoreFetchRetryPolicy retryPolicy,
-            HighscoreStatRecordWriter statRecordWriter
+            HighscoreStatStorageService statStorageService
     ) {
         this.pageFetcher = pageFetcher;
         this.scopePlanner = scopePlanner;
         this.characterResolver = characterResolver;
         this.properties = properties;
-        this.stateRepository = stateRepository;
+        this.scopeStateService = scopeStateService;
         this.httpBackoffCoordinator = httpBackoffCoordinator;
         this.retryPolicy = retryPolicy;
-        this.statRecordWriter = statRecordWriter;
+        this.statStorageService = statStorageService;
     }
 
     public ScrapeJobResult updateAllHighscores() {
@@ -89,11 +90,11 @@ public class HighscoreService {
         }
     }
 
-    public HighscoreScrapeStateRepository.HighscoreHttpBackoffState getHttpBackoffState() {
+    public HighscoreHttpBackoffState getHttpBackoffState() {
         return httpBackoffCoordinator.getState();
     }
 
-    public HighscoreScrapeStateRepository.HighscoreHttpBackoffState resetHttpBackoffManually() {
+    public HighscoreHttpBackoffState resetHttpBackoffManually() {
         return httpBackoffCoordinator.resetManually();
     }
 
@@ -281,7 +282,7 @@ public class HighscoreService {
             AtomicBoolean rateLimited
     ) {
         Instant startedAt = Instant.now();
-        stateRepository.markStarted(scope);
+        scopeStateService.markStarted(scope);
         log.info("[HIGHSCORE_SCRAPER] Scope started: plan={}, scope={}", planName, scope.label());
 
         int pages = 0;
@@ -319,7 +320,7 @@ public class HighscoreService {
                 }
                 pageResults.sort(Comparator.comparingInt(HighscorePageFetcher.PageResult::page));
 
-                List<HighscoreStatRecordWriter.HighscoreStatRow> windowStatRows = new ArrayList<>();
+                List<HighscoreStatRow> windowStatRows = new ArrayList<>();
                 for (HighscorePageFetcher.PageResult pageResult : pageResults) {
                     if (pageResult.rows().isEmpty()) {
                         shouldStop = true;
@@ -333,7 +334,7 @@ public class HighscoreService {
                             continue;
                         }
                         Long characterId = characterResolver.resolveCharacterId(characterName, characterIdCache);
-                        windowStatRows.add(new HighscoreStatRecordWriter.HighscoreStatRow(
+                        windowStatRows.add(new HighscoreStatRow(
                                 characterId,
                                 scope.worldId(),
                                 scope.category(),
@@ -347,7 +348,7 @@ public class HighscoreService {
                 }
 
                 if (!windowStatRows.isEmpty()) {
-                    rows += statRecordWriter.upsertBatch(windowStatRows);
+                    rows += statStorageService.upsertBatch(windowStatRows);
                 }
 
                 if (log.isDebugEnabled()) {
@@ -366,20 +367,20 @@ public class HighscoreService {
 
             String status = rows > 0 ? "SUCCESS" : "EMPTY";
             long durationMs = Duration.between(startedAt, Instant.now()).toMillis();
-            stateRepository.markFinished(scope, status, pages, rows, durationMs, null);
+            scopeStateService.markFinished(scope, status, pages, rows, durationMs, null);
             log.info("[HIGHSCORE_SCRAPER] Scope finished: plan={}, scope={}, status={}, pages={}, rows={}, durationMs={}",
                     planName, scope.label(), status, pages, rows, durationMs);
             return new ScopeResult(status, pages, rows);
         } catch (RateLimitedHighscoreException ex) {
             long durationMs = Duration.between(startedAt, Instant.now()).toMillis();
             rateLimited.set(true);
-            stateRepository.markFinished(scope, "RATE_LIMITED", pages, rows, durationMs, retryPolicy.rootMessage(ex));
+            scopeStateService.markFinished(scope, "RATE_LIMITED", pages, rows, durationMs, retryPolicy.rootMessage(ex));
             log.warn("[HIGHSCORE_SCRAPER] Scope rate-limited: plan={}, scope={}, pages={}, rows={}, durationMs={}, error={}",
                     planName, scope.label(), pages, rows, durationMs, retryPolicy.rootMessage(ex));
             return new ScopeResult("RATE_LIMITED", pages, rows);
         } catch (Exception ex) {
             long durationMs = Duration.between(startedAt, Instant.now()).toMillis();
-            stateRepository.markFinished(scope, "FAILED", pages, rows, durationMs, retryPolicy.rootMessage(ex));
+            scopeStateService.markFinished(scope, "FAILED", pages, rows, durationMs, retryPolicy.rootMessage(ex));
             log.error("[HIGHSCORE_SCRAPER] Scope failed: plan={}, scope={}, pages={}, rows={}, durationMs={}, error={}",
                     planName, scope.label(), pages, rows, durationMs, retryPolicy.rootMessage(ex), ex);
             return new ScopeResult("FAILED", pages, rows);

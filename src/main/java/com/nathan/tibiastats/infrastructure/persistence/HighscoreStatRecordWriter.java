@@ -1,6 +1,8 @@
 package com.nathan.tibiastats.infrastructure.persistence;
 
+import com.nathan.tibiastats.domain.model.HighscoreStatRow;
 import com.nathan.tibiastats.domain.model.StatCategory;
+import com.nathan.tibiastats.domain.port.HighscoreStatRecordRepositoryPort;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -14,23 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Repository
-public class HighscoreStatRecordWriter {
+public class HighscoreStatRecordWriter implements HighscoreStatRecordRepositoryPort {
     private final JdbcTemplate jdbc;
 
     public HighscoreStatRecordWriter(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    public record HighscoreStatRow(
-            Long characterId,
-            Integer worldId,
-            StatCategory category,
-            int vocationFilterId,
-            LocalDate date,
-            long value,
-            int rank,
-            Instant scrapedAt
-    ) {}
 
     private record CurrentHighscoreRow(int rank, long value) {}
 

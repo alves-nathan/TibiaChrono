@@ -202,6 +202,22 @@ class ArchitectureRulesTest {
 
 
     @ArchTest
+    static final ArchRule application_should_access_highscore_scrape_state_through_domain_ports = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.infrastructure.persistence.HighscoreScrapeStateRepository"
+            );
+
+
+    @ArchTest
+    static final ArchRule application_should_access_highscore_stat_records_through_domain_ports = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.infrastructure.persistence.HighscoreStatRecordWriter"
+            );
+
+
+    @ArchTest
     static final ArchRule admin_scraper_service_should_remain_a_facade_without_direct_config_persistence_or_query_access = noClasses()
             .that().haveSimpleName("AdminScraperService")
             .should().dependOnClassesThat().resideInAnyPackage(

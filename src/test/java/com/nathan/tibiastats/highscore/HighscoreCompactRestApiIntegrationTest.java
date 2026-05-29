@@ -2,6 +2,7 @@ package com.nathan.tibiastats.highscore;
 
 import com.jayway.jsonpath.JsonPath;
 import com.nathan.tibiastats.AbstractPostgresTest;
+import com.nathan.tibiastats.domain.model.HighscoreStatRow;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.infrastructure.persistence.HighscoreStatRecordWriter;
 import org.junit.jupiter.api.BeforeEach;
@@ -144,14 +145,14 @@ class HighscoreCompactRestApiIntegrationTest extends AbstractPostgresTest {
                 .andExpect(jsonPath("$[0].experience", is(5000)));
     }
 
-    private HighscoreStatRecordWriter.HighscoreStatRow row(Long characterId,
+    private HighscoreStatRow row(Long characterId,
                                                            Integer worldId,
                                                            StatCategory category,
                                                            int vocationFilterId,
                                                            LocalDate date,
                                                            long value,
                                                            int rank) {
-        return new HighscoreStatRecordWriter.HighscoreStatRow(
+        return new HighscoreStatRow(
                 characterId,
                 worldId,
                 category,

@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.highscore;
 
 import com.nathan.tibiastats.AbstractPostgresTest;
+import com.nathan.tibiastats.domain.model.HighscoreStatRow;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.infrastructure.persistence.HighscoreStatRecordWriter;
 import org.junit.jupiter.api.BeforeEach;
@@ -148,7 +149,7 @@ class HighscoreCompactStorageIntegrationTest extends AbstractPostgresTest {
         assertThat(queryNullableDate("select valid_until from highscore_record_periods where character_id = ?", characterId)).isNull();
     }
 
-    private HighscoreStatRecordWriter.HighscoreStatRow row(
+    private HighscoreStatRow row(
             Long characterId,
             Integer worldId,
             StatCategory category,
@@ -158,7 +159,7 @@ class HighscoreCompactStorageIntegrationTest extends AbstractPostgresTest {
             int rank,
             Instant scrapedAt
     ) {
-        return new HighscoreStatRecordWriter.HighscoreStatRow(
+        return new HighscoreStatRow(
                 characterId,
                 worldId,
                 category,

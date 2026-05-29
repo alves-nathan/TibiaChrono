@@ -1,10 +1,11 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
+import com.nathan.tibiastats.domain.model.HighscoreScope;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.domain.model.World;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
-import com.nathan.tibiastats.infrastructure.persistence.HighscoreScrapeStateRepository;
+import com.nathan.tibiastats.domain.port.HighscoreScrapeStateRepositoryPort;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -13,11 +14,11 @@ import java.util.List;
 @Service
 public class HighscoreScopePlanner {
     private final WorldRepositoryPort worldRepository;
-    private final HighscoreScrapeStateRepository stateRepository;
+    private final HighscoreScrapeStateRepositoryPort stateRepository;
 
     public HighscoreScopePlanner(
             WorldRepositoryPort worldRepository,
-            HighscoreScrapeStateRepository stateRepository
+            HighscoreScrapeStateRepositoryPort stateRepository
     ) {
         this.worldRepository = worldRepository;
         this.stateRepository = stateRepository;

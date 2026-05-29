@@ -1,6 +1,4 @@
-package com.nathan.tibiastats.application.service;
-
-import com.nathan.tibiastats.domain.model.StatCategory;
+package com.nathan.tibiastats.domain.model;
 
 public record HighscoreScope(
         Integer worldId,

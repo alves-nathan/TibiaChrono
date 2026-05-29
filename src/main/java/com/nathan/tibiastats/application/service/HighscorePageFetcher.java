@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
+import com.nathan.tibiastats.domain.model.HighscoreScope;
 import com.nathan.tibiastats.domain.port.HighscorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
