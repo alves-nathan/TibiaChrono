@@ -41,3 +41,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0019: Split JsoupGuildAdapter into transport and parser collaborators](adr/ADR-0019-jsoup-guild-adapter-parser-split.md)
 - [ADR-0020: Split Jsoup world and character adapters into transport and parser collaborators](adr/ADR-0020-jsoup-world-character-adapter-parser-split.md)
 - [ADR-0021: Access guild persistence through domain repository ports](adr/ADR-0021-guild-persistence-through-domain-ports.md)
+- [ADR-0022: AdminScraperService as an admin scraper facade](adr/ADR-0022-admin-scraper-service-as-facade.md)
