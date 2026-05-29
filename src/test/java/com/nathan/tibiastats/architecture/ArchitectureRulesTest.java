@@ -105,6 +105,15 @@ class ArchitectureRulesTest {
 
 
     @ArchTest
+    static final ArchRule highscore_api_query_service_should_remain_a_facade_without_direct_jdbc = noClasses()
+            .that().haveSimpleName("HighscoreApiQueryService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.springframework.jdbc..",
+                    "java.sql.."
+            );
+
+
+    @ArchTest
     static final ArchRule character_timeline_service_should_remain_a_facade_without_direct_jdbc = noClasses()
             .that().haveSimpleName("CharacterTimelineService")
             .should().dependOnClassesThat().resideInAnyPackage(
