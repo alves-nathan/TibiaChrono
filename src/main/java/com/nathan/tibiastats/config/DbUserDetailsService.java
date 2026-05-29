@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.config;
 
-import com.nathan.tibiastats.infrastructure.persistence.UserAccountRepository;
+import com.nathan.tibiastats.domain.port.UserAccountRepositoryPort;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DbUserDetailsService implements UserDetailsService {
-    private final UserAccountRepository repo;
-    public DbUserDetailsService(UserAccountRepository repo){this.repo=repo;}
+    private final UserAccountRepositoryPort repo;
+    public DbUserDetailsService(UserAccountRepositoryPort repo){this.repo=repo;}
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         var acc = repo.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));

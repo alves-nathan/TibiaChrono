@@ -227,6 +227,42 @@ class ArchitectureRulesTest {
 
 
     @ArchTest
+    static final ArchRule auth_flows_should_access_user_accounts_through_domain_ports = noClasses()
+            .that().resideInAnyPackage(
+                    "..application..",
+                    "..config..",
+                    "..infrastructure.adapter.web.rest.."
+            )
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.infrastructure.persistence.UserAccountRepository"
+            );
+
+
+    @ArchTest
+    static final ArchRule auth_flows_should_access_refresh_tokens_through_domain_ports = noClasses()
+            .that().resideInAnyPackage(
+                    "..application..",
+                    "..config..",
+                    "..infrastructure.adapter.web.rest.."
+            )
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.infrastructure.persistence.RefreshTokenRepository"
+            );
+
+
+    @ArchTest
+    static final ArchRule auth_flows_should_access_blacklisted_tokens_through_domain_ports = noClasses()
+            .that().resideInAnyPackage(
+                    "..application..",
+                    "..config..",
+                    "..infrastructure.adapter.web.rest.."
+            )
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.infrastructure.persistence.BlacklistedTokenRepository"
+            );
+
+
+    @ArchTest
     static final ArchRule admin_scraper_service_should_remain_a_facade_without_direct_config_persistence_or_query_access = noClasses()
             .that().haveSimpleName("AdminScraperService")
             .should().dependOnClassesThat().resideInAnyPackage(

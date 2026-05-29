@@ -44,3 +44,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0022: AdminScraperService as an admin scraper facade](adr/ADR-0022-admin-scraper-service-as-facade.md)
 - [ADR-0023: Access highscore persistence through domain repository ports](adr/ADR-0023-highscore-persistence-through-domain-ports.md)
 - [ADR-0024: Split JsoupHighscoreAdapter into transport and parser collaborators](adr/ADR-0024-jsoup-highscore-adapter-parser-split.md)
+- [ADR-0025: Access authentication persistence through domain repository ports](adr/ADR-0025-auth-persistence-through-domain-ports.md)

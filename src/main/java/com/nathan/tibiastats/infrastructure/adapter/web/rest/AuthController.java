@@ -3,7 +3,7 @@ package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 import com.nathan.tibiastats.application.service.TokenService;
 import com.nathan.tibiastats.config.JwtService;
 import com.nathan.tibiastats.domain.model.UserAccount;
-import com.nathan.tibiastats.infrastructure.persistence.UserAccountRepository;
+import com.nathan.tibiastats.domain.port.UserAccountRepositoryPort;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -32,14 +32,14 @@ public class AuthController {
 
     private final AuthenticationManager authManager;
     private final JwtService jwt;
-    private final UserAccountRepository users;
+    private final UserAccountRepositoryPort users;
     private final PasswordEncoder encoder;
     private final TokenService tokens;
 
     public AuthController(
             AuthenticationManager authManager,
             JwtService jwt,
-            UserAccountRepository users,
+            UserAccountRepositoryPort users,
             PasswordEncoder encoder,
             TokenService tokens
     ) {

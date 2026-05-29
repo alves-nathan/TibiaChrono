@@ -3,9 +3,9 @@ package com.nathan.tibiastats.application.service;
 import com.nathan.tibiastats.config.JwtService;
 import com.nathan.tibiastats.domain.model.BlacklistedToken;
 import com.nathan.tibiastats.domain.model.RefreshToken;
-import com.nathan.tibiastats.infrastructure.persistence.BlacklistedTokenRepository;
-import com.nathan.tibiastats.infrastructure.persistence.RefreshTokenRepository;
-import com.nathan.tibiastats.infrastructure.persistence.UserAccountRepository;
+import com.nathan.tibiastats.domain.port.BlacklistedTokenRepositoryPort;
+import com.nathan.tibiastats.domain.port.RefreshTokenRepositoryPort;
+import com.nathan.tibiastats.domain.port.UserAccountRepositoryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,15 +14,15 @@ import java.util.Optional;
 @Service
 public class TokenService {
     private final JwtService jwtService;
-    private final RefreshTokenRepository refreshRepo;
-    private final BlacklistedTokenRepository blacklistRepo;
-    private final UserAccountRepository users;
+    private final RefreshTokenRepositoryPort refreshRepo;
+    private final BlacklistedTokenRepositoryPort blacklistRepo;
+    private final UserAccountRepositoryPort users;
 
     public TokenService(
             JwtService jwtService,
-            RefreshTokenRepository refreshRepo,
-            BlacklistedTokenRepository blacklistRepo,
-            UserAccountRepository users
+            RefreshTokenRepositoryPort refreshRepo,
+            BlacklistedTokenRepositoryPort blacklistRepo,
+            UserAccountRepositoryPort users
     ) {
         this.jwtService = jwtService;
         this.refreshRepo = refreshRepo;
