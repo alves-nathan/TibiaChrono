@@ -1,9 +1,9 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
-import com.nathan.tibiastats.application.service.ApiQueryService;
+import com.nathan.tibiastats.application.query.ApiQueryService;
 import com.nathan.tibiastats.application.service.CharacterOnlineActivityService;
-import com.nathan.tibiastats.application.service.CharacterTimelineService;
-import com.nathan.tibiastats.application.service.HighscoreApiQueryService;
+import com.nathan.tibiastats.application.query.CharacterTimelineService;
+import com.nathan.tibiastats.application.query.HighscoreApiQueryService;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;

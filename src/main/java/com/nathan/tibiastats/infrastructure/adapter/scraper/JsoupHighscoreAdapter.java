@@ -56,23 +56,7 @@ public class JsoupHighscoreAdapter implements HighscorePort {
             }
 
             Document doc = Jsoup.parse(response.body(), url);
-            List<HighscoreRow> out = new ArrayList<>();
-            Elements rows = doc.select("table.TableContent tr");
-            for (Element tr : rows) {
-                Elements tds = tr.select("td");
-                if (tds.size() < 3) {
-                    continue;
-                }
-
-                int rank = parseIntSafe(tds.get(0).text());
-                String name = tds.get(1).text().trim();
-                long value = parseLongSafe(tds.get(tds.size() - 1).text());
-
-                if (rank > 0 && !name.isBlank()) {
-                    out.add(new HighscoreRow(rank, name, value));
-                }
-            }
-            return out;
+            return parseHighscoreDocument(doc);
         } catch (IOException e) {
             throw new RuntimeException("Failed to fetch highscores: world=" + world
                     + ", category=" + category
@@ -85,6 +69,48 @@ public class JsoupHighscoreAdapter implements HighscorePort {
                     + ", vocationId=" + vocationId
                     + ", page=" + page, e);
         }
+    }
+
+    List<HighscoreRow> parseHighscoreDocument(Document doc) {
+        List<HighscoreRow> out = new ArrayList<>();
+        Elements rows = doc.select("table.TableContent tr");
+        for (Element tr : rows) {
+            Elements tds = tr.select("td");
+            if (tds.size() < 3) {
+                continue;
+            }
+
+            int rank = parseIntSafe(tds.get(0).text());
+            String name = tds.get(1).text().trim();
+            long value = parseLongSafe(tds.get(tds.size() - 1).text());
+
+            if (rank > 0 && !name.isBlank()) {
+                out.add(new HighscoreRow(rank, name, value));
+            }
+        }
+        return out;
+    }
+
+
+    List<HighscoreRow> parseHighscoresHtml(String html, String sourceUrl) {
+        Document doc = Jsoup.parse(html, sourceUrl);
+        List<HighscoreRow> out = new ArrayList<>();
+        Elements rows = doc.select("table.TableContent tr");
+        for (Element tr : rows) {
+            Elements tds = tr.select("td");
+            if (tds.size() < 3) {
+                continue;
+            }
+
+            int rank = parseIntSafe(tds.get(0).text());
+            String name = tds.get(1).text().trim();
+            long value = parseLongSafe(tds.get(tds.size() - 1).text());
+
+            if (rank > 0 && !name.isBlank()) {
+                out.add(new HighscoreRow(rank, name, value));
+            }
+        }
+        return out;
     }
 
     private int mapCategory(StatCategory c) {

@@ -43,6 +43,7 @@ help:
 	@echo "  make audit-worktree - list local/generated artifacts that should not be committed"
 	@echo "  make clean-local-artifacts - remove local/generated artifacts from the working tree"
 	@echo "  make export-clean   - create a clean ZIP export without local artifacts"
+	@echo "  make code-health   - print class-size and architecture hotspot report"
 
 # ---- Prod-like ----
 .PHONY: up
@@ -91,8 +92,6 @@ logs-dev:
 .PHONY: test
 test:
 	./run-tests.sh
-
-
 
 .PHONY: test-coverage
 test-coverage:
@@ -154,7 +153,6 @@ jwt-secret:
 env-print:
 	@echo "JWT_SECRET=$(JWT_SECRET)"
 
-
 # ---- Repository hygiene ----
 .PHONY: audit-worktree
 audit-worktree:
@@ -179,6 +177,10 @@ clean-local-artifacts:
 .PHONY: export-clean
 export-clean:
 	./scripts/export-clean.sh
+
+.PHONY: code-health
+code-health:
+	./scripts/code-health-report.sh
 
 
 # ---- Quality gates ----

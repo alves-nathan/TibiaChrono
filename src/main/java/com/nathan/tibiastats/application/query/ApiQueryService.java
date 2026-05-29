@@ -1,10 +1,9 @@
-package com.nathan.tibiastats.application.service;
+package com.nathan.tibiastats.application.query;
 
 import com.nathan.tibiastats.domain.model.StatCategory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,7 +17,8 @@ import java.util.Optional;
 import java.sql.Types;
 import java.time.ZoneOffset;
 
-@Service
+@ReadModelService
+@ReadModelComponent
 public class ApiQueryService {
     private final NamedParameterJdbcTemplate jdbc;
 

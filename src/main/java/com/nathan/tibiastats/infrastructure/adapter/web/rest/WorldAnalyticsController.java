@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
-import com.nathan.tibiastats.application.service.WorldOnlineAnalyticsService;
+import com.nathan.tibiastats.application.query.WorldOnlineAnalyticsService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

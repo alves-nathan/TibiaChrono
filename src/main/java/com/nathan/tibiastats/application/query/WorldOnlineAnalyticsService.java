@@ -1,10 +1,9 @@
-package com.nathan.tibiastats.application.service;
+package com.nathan.tibiastats.application.query;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.ResultSet;
@@ -15,7 +14,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-@Service
+@ReadModelService
+@ReadModelComponent
 public class WorldOnlineAnalyticsService {
     private static final int DEFAULT_LIMIT = 50;
     private static final int MAX_LIMIT = 500;

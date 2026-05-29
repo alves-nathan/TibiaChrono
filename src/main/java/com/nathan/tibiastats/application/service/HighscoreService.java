@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -49,6 +50,9 @@ public class HighscoreService {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicLong globalHttpCooldownUntilMs = new AtomicLong(0);
     private final AtomicLong nextAllowedHttpRequestAtMs = new AtomicLong(0);
+    private final Object requestBudgetLock = new Object();
+    private final ArrayDeque<Long> recentHighscoreRequestStarts = new ArrayDeque<>();
+    private final AtomicLong lastRequestBudgetLogAtMs = new AtomicLong(0);
     private final AtomicLong lastCooldownLogAtMs = new AtomicLong(0);
     private final AtomicLong lastRetrySleepLogAtMs = new AtomicLong(0);
     private final Object httpBackoffLock = new Object();
@@ -426,6 +430,7 @@ public class HighscoreService {
                 awaitGlobalHttpCooldown(plan);
                 awaitGlobalRequestPace(plan);
                 throttleRequestWithJitter(plan);
+                awaitGlobalRequestBudget(plan);
                 List<HighscorePort.HighscoreRow> rows = highscorePort.fetchHighscores(
                         scope.worldName(),
                         scope.category(),
@@ -571,6 +576,65 @@ public class HighscoreService {
                 }
                 return;
             }
+        }
+    }
+
+    /**
+     * Hard cap for highscore HTTP request starts in a rolling window.
+     *
+     * <p>The request semaphore limits concurrency and {@link #awaitGlobalRequestPace(HighscoreScrapeProperties.Plan)}
+     * spaces out bursts, but neither one alone protects against unsafe aggregate volume when a full highscore run spans
+     * many worlds, categories, vocations and pages. This in-memory budget is intentionally global to every highscore
+     * plan handled by this JVM and defaults to the external safety ceiling of 150,000 requests per 10 minutes.</p>
+     */
+    private void awaitGlobalRequestBudget(HighscoreScrapeProperties.Plan plan) {
+        int maxRequests = plan.getRequestBudgetMaxRequests();
+        long windowMs = plan.getRequestBudgetWindowMs();
+        if (maxRequests <= 0 || windowMs <= 0) {
+            return;
+        }
+
+        while (true) {
+            long now = System.currentTimeMillis();
+            long waitMs;
+            synchronized (requestBudgetLock) {
+                pruneHighscoreRequestBudget(now, windowMs);
+                if (recentHighscoreRequestStarts.size() < maxRequests) {
+                    recentHighscoreRequestStarts.addLast(now);
+                    return;
+                }
+
+                Long oldestRequestStart = recentHighscoreRequestStarts.peekFirst();
+                waitMs = oldestRequestStart == null ? 1L : Math.max(1L, oldestRequestStart + windowMs - now);
+            }
+
+            logRequestBudgetHeartbeat(plan, waitMs, maxRequests, windowMs);
+            sleepMs(Math.min(waitMs, 1000L));
+        }
+    }
+
+    private void pruneHighscoreRequestBudget(long now, long windowMs) {
+        long oldestAllowedRequestStart = now - windowMs;
+        while (!recentHighscoreRequestStarts.isEmpty()) {
+            Long first = recentHighscoreRequestStarts.peekFirst();
+            if (first == null || first > oldestAllowedRequestStart) {
+                return;
+            }
+            recentHighscoreRequestStarts.removeFirst();
+        }
+    }
+
+    private void logRequestBudgetHeartbeat(HighscoreScrapeProperties.Plan plan, long waitMs, int maxRequests, long windowMs) {
+        long now = System.currentTimeMillis();
+        long intervalMs = plan.getCooldownLogIntervalMs();
+        long lastLog = lastRequestBudgetLogAtMs.get();
+        if (intervalMs > 0 && now - lastLog >= intervalMs && lastRequestBudgetLogAtMs.compareAndSet(lastLog, now)) {
+            log.warn(
+                    "[HIGHSCORE_SCRAPER] Highscore request budget exhausted. Waiting before next request: waitMs={}, maxRequests={}, windowMs={}",
+                    Math.max(0L, waitMs),
+                    maxRequests,
+                    windowMs
+            );
         }
     }
 

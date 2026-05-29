@@ -1,5 +1,7 @@
 package com.nathan.tibiastats.application.service;
 
+import com.nathan.tibiastats.application.query.ApiQueryService;
+
 import com.nathan.tibiastats.config.AppProperties;
 import com.nathan.tibiastats.config.GuildScrapeProperties;
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;

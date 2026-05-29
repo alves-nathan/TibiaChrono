@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
-import com.nathan.tibiastats.application.service.GuildQueryService;
+import com.nathan.tibiastats.application.query.GuildQueryService;
 import com.nathan.tibiastats.application.service.GuildScrapeService;
 import com.nathan.tibiastats.domain.model.GuildMembershipEventType;
 import org.springframework.format.annotation.DateTimeFormat;

@@ -60,45 +60,7 @@ public class JsoupCharacterAdapter implements CharacterDetailPort {
                     .timeout(TIMEOUT_MS)
                     .get();
 
-            if (isCharacterNotFound(doc)) {
-                log.warn("{} Character not found on Tibia.com: {}", LOG_PREFIX, characterName);
-                return Optional.empty();
-            }
-
-            Map<String, String> fields = collectCharacterFields(doc);
-            if (fields.isEmpty()) {
-                log.warn("{} No character profile fields parsed for {}. title='{}'", LOG_PREFIX, characterName, doc.title());
-            } else {
-                log.debug("{} Parsed fields for {}: {}", LOG_PREFIX, characterName, fields.keySet());
-            }
-
-            String currentName = firstNonBlank(fields.get("name"), characterName);
-            List<String> formerNames = splitFormerNames(fields.get("former names"));
-            CharacterEntity.Sex sex = parseSex(fields.get("sex"));
-            String vocation = fields.get("vocation");
-            Integer level = parseIntegerOrNull(fields.get("level"));
-            Integer achievementPoints = parseIntegerOrNull(fields.get("achievement points"));
-            String residence = fields.get("residence");
-            OffsetDateTime lastLogin = parseTibiaDateTime(fields.get("last login")).orElse(null);
-            String accountStatus = fields.get("account status");
-            Instant creationDate = parseTibiaDateTime(fields.get("created"))
-                    .map(OffsetDateTime::toInstant)
-                    .orElse(null);
-            String world = fields.get("world");
-
-            return Optional.of(new CharacterDetails(
-                    currentName,
-                    formerNames,
-                    sex,
-                    vocation,
-                    level,
-                    achievementPoints,
-                    residence,
-                    lastLogin,
-                    accountStatus,
-                    creationDate,
-                    world
-            ));
+            return parseCharacterDetailsDocument(doc, characterName);
         } catch (HttpStatusException e) {
             throw new RuntimeException(
                     "Failed to fetch character details for " + characterName + ": HTTP " + e.getStatusCode(),
@@ -107,6 +69,54 @@ public class JsoupCharacterAdapter implements CharacterDetailPort {
         } catch (IOException e) {
             throw new RuntimeException("Failed to fetch character details for " + characterName, e);
         }
+    }
+
+
+    Optional<CharacterDetails> parseCharacterDetailsHtml(String html, String characterName) {
+        Document doc = Jsoup.parse(html == null ? "" : html);
+        return parseCharacterDetailsDocument(doc, characterName);
+    }
+
+    Optional<CharacterDetails> parseCharacterDetailsDocument(Document doc, String characterName) {
+        if (isCharacterNotFound(doc)) {
+            log.warn("{} Character not found on Tibia.com: {}", LOG_PREFIX, characterName);
+            return Optional.empty();
+        }
+
+        Map<String, String> fields = collectCharacterFields(doc);
+        if (fields.isEmpty()) {
+            log.warn("{} No character profile fields parsed for {}. title='{}'", LOG_PREFIX, characterName, doc.title());
+        } else {
+            log.debug("{} Parsed fields for {}: {}", LOG_PREFIX, characterName, fields.keySet());
+        }
+
+        String currentName = firstNonBlank(fields.get("name"), characterName);
+        List<String> formerNames = splitFormerNames(fields.get("former names"));
+        CharacterEntity.Sex sex = parseSex(fields.get("sex"));
+        String vocation = fields.get("vocation");
+        Integer level = parseIntegerOrNull(fields.get("level"));
+        Integer achievementPoints = parseIntegerOrNull(fields.get("achievement points"));
+        String residence = fields.get("residence");
+        OffsetDateTime lastLogin = parseTibiaDateTime(fields.get("last login")).orElse(null);
+        String accountStatus = fields.get("account status");
+        Instant creationDate = parseTibiaDateTime(fields.get("created"))
+                .map(OffsetDateTime::toInstant)
+                .orElse(null);
+        String world = fields.get("world");
+
+        return Optional.of(new CharacterDetails(
+                currentName,
+                formerNames,
+                sex,
+                vocation,
+                level,
+                achievementPoints,
+                residence,
+                lastLogin,
+                accountStatus,
+                creationDate,
+                world
+        ));
     }
 
     private Map<String, String> collectCharacterFields(Document doc) {

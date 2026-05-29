@@ -1,5 +1,7 @@
 package com.nathan.tibiastats.application.service;
 
+import com.nathan.tibiastats.application.query.ApiQueryService;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;

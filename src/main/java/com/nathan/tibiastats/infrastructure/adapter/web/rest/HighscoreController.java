@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
-import com.nathan.tibiastats.application.service.HighscoreApiQueryService;
+import com.nathan.tibiastats.application.query.HighscoreApiQueryService;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;

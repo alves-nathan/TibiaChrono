@@ -55,6 +55,20 @@ tibiastats:
       max-pages: 100
       page-delay-ms: 1000
       world-limit: 0
+      request-parallelism: 1
+      request-max-attempts: 1
+      retry-base-delay-ms: 5000
+      retry-max-delay-ms: 300000
+      forbidden-cooldown-ms: 259200000
+      forbidden-initial-cooldown-ms: 259200000
+      forbidden-max-cooldown-ms: 1209600000
+      forbidden-cooldown-multiplier: 2.0
+      request-jitter-ms: 300
+      request-min-interval-ms: 750
+      request-budget-max-requests: 150000
+      request-budget-window-ms: 600000
+      cooldown-log-interval-ms: 30000
+      abort-run-on-forbidden: true
   jwt:
     access-ttl-ms: 900000
     refresh-ttl-ms: 1209600000

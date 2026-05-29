@@ -96,9 +96,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -120,9 +125,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -144,9 +154,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -168,9 +183,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -192,9 +212,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -216,9 +241,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -240,9 +270,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -264,9 +299,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -288,9 +328,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -312,9 +357,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -336,9 +386,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -360,9 +415,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -384,9 +444,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -408,9 +473,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -432,9 +502,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -456,9 +531,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -480,9 +560,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 750
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true
@@ -505,9 +590,14 @@ tibiastats:
           request-max-attempts: 1
           retry-base-delay-ms: 5000
           retry-max-delay-ms: 300000
-          forbidden-cooldown-ms: 14400000
+          forbidden-cooldown-ms: 259200000
+          forbidden-initial-cooldown-ms: 259200000
+          forbidden-max-cooldown-ms: 1209600000
+          forbidden-cooldown-multiplier: 2.0
           request-jitter-ms: 300
           request-min-interval-ms: 2000
+          request-budget-max-requests: 150000
+          request-budget-window-ms: 600000
           cooldown-log-interval-ms: 30000
           progress-log-interval-scopes: 10
           abort-run-on-forbidden: true

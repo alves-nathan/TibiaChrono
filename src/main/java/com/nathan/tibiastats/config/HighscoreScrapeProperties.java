@@ -17,6 +17,8 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "tibiastats.scrape.highscores")
 public class HighscoreScrapeProperties {
     private static final Logger log = LoggerFactory.getLogger(HighscoreScrapeProperties.class);
+    private static final int HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT = 150_000;
+    private static final long HIGHSCORE_REQUEST_BUDGET_WINDOW_MS = 600_000L;
 
     private boolean enabled = true;
     private String cron = "0 0 7 * * *";
@@ -38,12 +40,14 @@ public class HighscoreScrapeProperties {
     /**
      * Deprecated compatibility field. Use forbiddenInitialCooldownMs/forbiddenMaxCooldownMs instead.
      */
-    private int forbiddenCooldownMs = 14400000;
-    private long forbiddenInitialCooldownMs = 86400000L; // 24h
-    private long forbiddenMaxCooldownMs = 604800000L;    // 7d
+    private int forbiddenCooldownMs = 259200000;
+    private long forbiddenInitialCooldownMs = 259200000L; // 72h
+    private long forbiddenMaxCooldownMs = 1209600000L; // 14d
     private double forbiddenCooldownMultiplier = 2.0D;
     private int requestJitterMs = 300;
     private int requestMinIntervalMs = 750;
+    private int requestBudgetMaxRequests = HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT;
+    private long requestBudgetWindowMs = HIGHSCORE_REQUEST_BUDGET_WINDOW_MS;
     private int cooldownLogIntervalMs = 30000;
     private int progressLogIntervalScopes = 10;
     private boolean abortRunOnForbidden = true;
@@ -244,6 +248,28 @@ public class HighscoreScrapeProperties {
         this.requestMinIntervalMs = requestMinIntervalMs;
     }
 
+    public int getRequestBudgetMaxRequests() {
+        if (requestBudgetMaxRequests <= 0) {
+            return HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT;
+        }
+        return Math.min(requestBudgetMaxRequests, HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT);
+    }
+
+    public void setRequestBudgetMaxRequests(int requestBudgetMaxRequests) {
+        this.requestBudgetMaxRequests = requestBudgetMaxRequests;
+    }
+
+    public long getRequestBudgetWindowMs() {
+        if (requestBudgetWindowMs <= 0) {
+            return HIGHSCORE_REQUEST_BUDGET_WINDOW_MS;
+        }
+        return Math.max(requestBudgetWindowMs, HIGHSCORE_REQUEST_BUDGET_WINDOW_MS);
+    }
+
+    public void setRequestBudgetWindowMs(long requestBudgetWindowMs) {
+        this.requestBudgetWindowMs = requestBudgetWindowMs;
+    }
+
     public int getCooldownLogIntervalMs() {
         return Math.max(1000, cooldownLogIntervalMs);
     }
@@ -304,6 +330,8 @@ public class HighscoreScrapeProperties {
         plan.setForbiddenCooldownMultiplier(forbiddenCooldownMultiplier);
         plan.setRequestJitterMs(requestJitterMs);
         plan.setRequestMinIntervalMs(requestMinIntervalMs);
+        plan.setRequestBudgetMaxRequests(requestBudgetMaxRequests);
+        plan.setRequestBudgetWindowMs(requestBudgetWindowMs);
         plan.setCooldownLogIntervalMs(cooldownLogIntervalMs);
         plan.setProgressLogIntervalScopes(progressLogIntervalScopes);
         plan.setAbortRunOnForbidden(abortRunOnForbidden);
@@ -390,12 +418,14 @@ public class HighscoreScrapeProperties {
         /**
          * Deprecated compatibility field. Use forbiddenInitialCooldownMs/forbiddenMaxCooldownMs instead.
          */
-        private int forbiddenCooldownMs = 14400000;
-        private long forbiddenInitialCooldownMs = 86400000L; // 24h
-        private long forbiddenMaxCooldownMs = 604800000L;    // 7d
+        private int forbiddenCooldownMs = 259200000;
+        private long forbiddenInitialCooldownMs = 259200000L; // 72h
+        private long forbiddenMaxCooldownMs = 1209600000L; // 14d
         private double forbiddenCooldownMultiplier = 2.0D;
         private int requestJitterMs = 300;
         private int requestMinIntervalMs = 750;
+        private int requestBudgetMaxRequests = HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT;
+        private long requestBudgetWindowMs = HIGHSCORE_REQUEST_BUDGET_WINDOW_MS;
         private int cooldownLogIntervalMs = 30000;
         private int progressLogIntervalScopes = 10;
         private boolean abortRunOnForbidden = true;
@@ -452,6 +482,20 @@ public class HighscoreScrapeProperties {
         public void setRequestJitterMs(int requestJitterMs) { this.requestJitterMs = requestJitterMs; }
         public int getRequestMinIntervalMs() { return Math.max(0, requestMinIntervalMs); }
         public void setRequestMinIntervalMs(int requestMinIntervalMs) { this.requestMinIntervalMs = requestMinIntervalMs; }
+        public int getRequestBudgetMaxRequests() {
+            if (requestBudgetMaxRequests <= 0) {
+                return HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT;
+            }
+            return Math.min(requestBudgetMaxRequests, HIGHSCORE_REQUEST_BUDGET_HARD_LIMIT);
+        }
+        public void setRequestBudgetMaxRequests(int requestBudgetMaxRequests) { this.requestBudgetMaxRequests = requestBudgetMaxRequests; }
+        public long getRequestBudgetWindowMs() {
+            if (requestBudgetWindowMs <= 0) {
+                return HIGHSCORE_REQUEST_BUDGET_WINDOW_MS;
+            }
+            return Math.max(requestBudgetWindowMs, HIGHSCORE_REQUEST_BUDGET_WINDOW_MS);
+        }
+        public void setRequestBudgetWindowMs(long requestBudgetWindowMs) { this.requestBudgetWindowMs = requestBudgetWindowMs; }
         public int getCooldownLogIntervalMs() { return Math.max(1000, cooldownLogIntervalMs); }
         public void setCooldownLogIntervalMs(int cooldownLogIntervalMs) { this.cooldownLogIntervalMs = cooldownLogIntervalMs; }
         public int getProgressLogIntervalScopes() { return Math.max(1, progressLogIntervalScopes); }
@@ -476,6 +520,8 @@ public class HighscoreScrapeProperties {
                     + ", pageWindowSize=" + getPageWindowSize()
                     + ", requestParallelism=" + getRequestParallelism()
                     + ", requestMinIntervalMs=" + getRequestMinIntervalMs()
+                    + ", requestBudgetMaxRequests=" + getRequestBudgetMaxRequests()
+                    + ", requestBudgetWindowMs=" + getRequestBudgetWindowMs()
                     + ", requestMaxAttempts=" + getRequestMaxAttempts()
                     + ", forbiddenInitialCooldownMs=" + getForbiddenInitialCooldownMs()
                     + ", forbiddenMaxCooldownMs=" + getForbiddenMaxCooldownMs()

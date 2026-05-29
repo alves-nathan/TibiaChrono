@@ -1,6 +1,6 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
-import com.nathan.tibiastats.application.service.ApiQueryService;
+import com.nathan.tibiastats.application.query.ApiQueryService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

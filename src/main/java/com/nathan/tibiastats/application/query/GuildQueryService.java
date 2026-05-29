@@ -1,16 +1,16 @@
-package com.nathan.tibiastats.application.service;
+package com.nathan.tibiastats.application.query;
 
 import com.nathan.tibiastats.domain.model.*;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
 import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-@Service
+@ReadModelService
+@ReadModelComponent
 public class GuildQueryService {
     private final SpringGuildRepository guilds;
     private final CharacterRepositoryPort characters;

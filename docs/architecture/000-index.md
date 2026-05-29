@@ -16,3 +16,9 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0001 - Use Flyway validate instead of Hibernate update](adr/ADR-0001-use-flyway-validate.md)
 - [ADR-0002 - Allow JDBC read models for analytics](adr/ADR-0002-jdbc-read-models-for-analytics.md)
 - [ADR-0003 - Keep compact highscore storage as the main model](adr/ADR-0003-highscore-compact-storage.md)
+
+- [ADR-0004 - Separate read models from write-side services](adr/ADR-0004-separate-read-models-from-write-side-services.md)
+
+- [ADR-0005 - Extract highscore HTTP backoff coordinator](adr/ADR-0005-extract-highscore-http-backoff-coordinator.md)
+
+- [ADR-0006 - Use HTML fixture characterization tests for scrapers](adr/ADR-0006-use-html-fixture-characterization-tests-for-scrapers.md)

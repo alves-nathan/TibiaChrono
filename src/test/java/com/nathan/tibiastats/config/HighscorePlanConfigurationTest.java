@@ -29,6 +29,10 @@ class HighscorePlanConfigurationTest {
         assertThat(dailyExp.vocationFilterIds()).containsExactly(0, 1, 2, 3, 4, 5, 6);
         assertThat(dailyExp.getPageWindowSize()).isEqualTo(1);
         assertThat(dailyExp.getRequestMaxAttempts()).isEqualTo(1);
+        assertThat(dailyExp.getForbiddenInitialCooldownMs()).isEqualTo(259_200_000L);
+        assertThat(dailyExp.getForbiddenMaxCooldownMs()).isEqualTo(1_209_600_000L);
+        assertThat(dailyExp.getRequestBudgetMaxRequests()).isEqualTo(150_000);
+        assertThat(dailyExp.getRequestBudgetWindowMs()).isGreaterThanOrEqualTo(600_000L);
         assertThat(dailyExp.isAbortRunOnForbidden()).isTrue();
         assertThat(dailyExp.isRunOnStartup()).isFalse();
 
@@ -45,9 +49,24 @@ class HighscorePlanConfigurationTest {
             }
             assertThat(plan.getPageWindowSize()).as(name + " must not use page-level parallelism").isEqualTo(1);
             assertThat(plan.getRequestMaxAttempts()).as(name + " must not keep retrying 403/429 responses").isEqualTo(1);
+            assertThat(plan.getForbiddenInitialCooldownMs()).as(name + " must start 403/429 cooldown at 72h").isEqualTo(259_200_000L);
+            assertThat(plan.getForbiddenMaxCooldownMs()).as(name + " must cap progressive 403/429 cooldown at 14d").isEqualTo(1_209_600_000L);
+            assertThat(plan.getRequestBudgetMaxRequests()).as(name + " must never exceed 150k requests per budget window").isLessThanOrEqualTo(150_000);
+            assertThat(plan.getRequestBudgetWindowMs()).as(name + " must use at least a 10 minute budget window").isGreaterThanOrEqualTo(600_000L);
             assertThat(plan.isAbortRunOnForbidden()).as(name + " must abort on 403/429").isTrue();
             assertThat(plan.isRunOnStartup()).as(name + " should not run automatically on every app boot").isFalse();
         });
+    }
+
+
+    @Test
+    void planClampsUnsafeRequestBudgetConfiguration() {
+        HighscoreScrapeProperties.Plan plan = new HighscoreScrapeProperties.Plan();
+        plan.setRequestBudgetMaxRequests(999_999);
+        plan.setRequestBudgetWindowMs(1_000L);
+
+        assertThat(plan.getRequestBudgetMaxRequests()).isEqualTo(150_000);
+        assertThat(plan.getRequestBudgetWindowMs()).isEqualTo(600_000L);
     }
 
     private HighscoreScrapeProperties bindApplicationDevHighscoreProperties() {

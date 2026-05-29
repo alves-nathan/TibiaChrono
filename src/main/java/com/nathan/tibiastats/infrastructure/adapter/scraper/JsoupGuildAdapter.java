@@ -69,57 +69,67 @@ public class JsoupGuildAdapter implements GuildScrapePort {
                     .timeout(TIMEOUT_MS)
                     .get();
 
-            String pageText = doc.text();
-            String requestedGuildName = normalize(guildName);
-            String extractedGuildName = sanitizeExtractedGuildName(extractGuildNameFromDetailPage(doc));
-            String name = firstNonBlank(
-                    requestedGuildName,
-                    extractedGuildName
-            );
-            String world = firstNonBlankOrNull(
-                    valueFromTable(doc, "World"),
-                    valueAfterLabel(pageText, "World:")
-            );
-            String homepage = firstNonBlankOrNull(
-                    valueFromTable(doc, "Homepage"),
-                    valueAfterLabel(pageText, "Homepage:")
-            );
-            String description = firstNonBlankOrNull(
-                    valueFromTable(doc, "Guild Description"),
-                    valueAfterLabel(pageText, "Guild Description:")
-            );
-            LocalDate foundedAt = parseDate(firstNonBlankOrNull(
-                    valueFromTable(doc, "Founded"),
-                    valueAfterLabel(pageText, "Founded:")
-            ));
-            Integer memberCount = parseNumberBefore(pageText, "members");
-            Integer onlineCount = parseNumberBefore(pageText, "online");
-            String logoUrl = findGuildLogoUrl(doc);
-
-            List<Member> members = parseMembers(doc);
-            if (memberCount == null && !members.isEmpty()) {
-                memberCount = members.size();
-            }
-            if (onlineCount == null && !members.isEmpty()) {
-                onlineCount = (int) members.stream().filter(Member::online).count();
-            }
-
-            return new GuildDetail(
-                    name,
-                    blankToNull(world),
-                    blankToNull(description),
-                    blankToNull(homepage),
-                    blankToNull(logoUrl),
-                    foundedAt,
-                    memberCount,
-                    onlineCount,
-                    sha256(pageText),
-                    members,
-                    parseInvites(doc)
-            );
+            return parseGuildDetailDocument(doc, guildName);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to fetch guild detail for '" + guildName + "'", e);
         }
+    }
+
+
+    GuildDetail parseGuildDetailHtml(String html, String guildName) {
+        Document doc = Jsoup.parse(html == null ? "" : html, BASE_URL);
+        return parseGuildDetailDocument(doc, guildName);
+    }
+
+    GuildDetail parseGuildDetailDocument(Document doc, String guildName) {
+        String pageText = doc.text();
+        String requestedGuildName = normalize(guildName);
+        String extractedGuildName = sanitizeExtractedGuildName(extractGuildNameFromDetailPage(doc));
+        String name = firstNonBlank(
+                requestedGuildName,
+                extractedGuildName
+        );
+        String world = firstNonBlankOrNull(
+                valueFromTable(doc, "World"),
+                valueAfterLabel(pageText, "World:")
+        );
+        String homepage = firstNonBlankOrNull(
+                valueFromTable(doc, "Homepage"),
+                valueAfterLabel(pageText, "Homepage:")
+        );
+        String description = firstNonBlankOrNull(
+                valueFromTable(doc, "Guild Description"),
+                valueAfterLabel(pageText, "Guild Description:")
+        );
+        LocalDate foundedAt = parseDate(firstNonBlankOrNull(
+                valueFromTable(doc, "Founded"),
+                valueAfterLabel(pageText, "Founded:")
+        ));
+        Integer memberCount = parseMemberCount(pageText);
+        Integer onlineCount = parseOnlineCount(pageText);
+        String logoUrl = findGuildLogoUrl(doc);
+
+        List<Member> members = parseMembers(doc);
+        if (memberCount == null && !members.isEmpty()) {
+            memberCount = members.size();
+        }
+        if (onlineCount == null && !members.isEmpty()) {
+            onlineCount = (int) members.stream().filter(Member::online).count();
+        }
+
+        return new GuildDetail(
+                name,
+                blankToNull(world),
+                blankToNull(description),
+                blankToNull(homepage),
+                blankToNull(logoUrl),
+                foundedAt,
+                memberCount,
+                onlineCount,
+                sha256(pageText),
+                members,
+                parseInvites(doc)
+        );
     }
 
     private List<Member> parseMembers(Document doc) {
@@ -436,6 +446,24 @@ public class JsoupGuildAdapter implements GuildScrapePort {
         Matcher matcher = CHARACTER_NAME_FROM_URL.matcher(href);
         if (matcher.find()) return decode(matcher.group(1));
         return link.text();
+    }
+
+    private static Integer parseMemberCount(String text) {
+        Integer labeledCount = parseNumberAfterLabel(text, "Members:");
+        if (labeledCount != null) return labeledCount;
+        return parseNumberBefore(text, "members");
+    }
+
+    private static Integer parseOnlineCount(String text) {
+        Integer labeledCount = parseNumberAfterLabel(text, "Online:");
+        if (labeledCount != null) return labeledCount;
+        return parseNumberBefore(text, "online");
+    }
+
+    private static Integer parseNumberAfterLabel(String text, String label) {
+        if (text == null || label == null) return null;
+        Matcher matcher = Pattern.compile(Pattern.quote(label) + "\\s*(\\d+)\\b", Pattern.CASE_INSENSITIVE).matcher(text);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
     }
 
     private static Integer parseNumberBefore(String text, String word) {

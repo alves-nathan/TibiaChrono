@@ -1,7 +1,7 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.graphql;
 
 import com.nathan.tibiastats.application.service.AnalyticsService;
-import com.nathan.tibiastats.application.service.ApiQueryService;
+import com.nathan.tibiastats.application.query.ApiQueryService;
 import com.nathan.tibiastats.domain.model.Scrape;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;

@@ -36,40 +36,49 @@ public class JsoupScrapeAdapter implements ScrapePort {
                     .userAgent(USER_AGENT)
                     .timeout(TIMEOUT_MS)
                     .get();
-
-            List<WorldSummary> worlds = new ArrayList<>();
-            Elements rows = doc.select("div.TableContentContainer table.TableContent tr");
-
-            for (Element tr : rows) {
-                Elements tds = tr.select("> td");
-                if (tds.size() < 4) {
-                    continue;
-                }
-
-                String name = tds.get(0).text().trim();
-                if (name.isBlank() || name.equalsIgnoreCase("World")) {
-                    continue;
-                }
-
-                int online = parseIntSafe(tds.get(1).text());
-                String location = tds.get(2).text().trim();
-                String pvp = tds.get(3).text().trim();
-                String additionalInfo = tds.stream()
-                        .skip(4)
-                        .map(this::cellTextIncludingImageLabels)
-                        .collect(Collectors.joining(" "))
-                        .trim();
-
-                String transferType = extractTransferType(additionalInfo).orElse("Regular");
-                String gameWorldType = extractGameWorldType(additionalInfo).orElse(null);
-
-                worlds.add(new WorldSummary(name, pvp, location, online, transferType, gameWorldType));
-            }
-
-            return worlds;
+            return parseWorldsOverviewDocument(doc);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    List<WorldSummary> parseWorldsOverviewDocument(Document doc) {
+        return parseWorldsOverviewHtml(doc.html(), WORLDS_URL);
+    }
+
+
+    List<WorldSummary> parseWorldsOverviewHtml(String html, String sourceUrl) {
+        Document doc = Jsoup.parse(html, sourceUrl);
+        List<WorldSummary> worlds = new ArrayList<>();
+        Elements rows = doc.select("div.TableContentContainer table.TableContent tr");
+
+        for (Element tr : rows) {
+            Elements tds = tr.select("> td");
+            if (tds.size() < 4) {
+                continue;
+            }
+
+            String name = tds.get(0).text().trim();
+            if (name.isBlank() || name.equalsIgnoreCase("World")) {
+                continue;
+            }
+
+            int online = parseIntSafe(tds.get(1).text());
+            String location = tds.get(2).text().trim();
+            String pvp = tds.get(3).text().trim();
+            String additionalInfo = tds.stream()
+                    .skip(4)
+                    .map(this::cellTextIncludingImageLabels)
+                    .collect(Collectors.joining(" "))
+                    .trim();
+
+            String transferType = extractTransferType(additionalInfo).orElse("Regular");
+            String gameWorldType = extractGameWorldType(additionalInfo).orElse(null);
+
+            worlds.add(new WorldSummary(name, pvp, location, online, transferType, gameWorldType));
+        }
+
+        return worlds;
     }
 
     @Override
@@ -80,84 +89,87 @@ public class JsoupScrapeAdapter implements ScrapePort {
                     .userAgent(USER_AGENT)
                     .timeout(TIMEOUT_MS)
                     .get();
-
-            int online = 0;
-            List<OnlineCharacterSnapshot> players = new ArrayList<>();
-
-            Elements rowsT1 = doc.select("table.Table1 div.InnerTableContainer tbody tr");
-            for (Element tr : rowsT1) {
-                String rowText = tr.text();
-                String value = lastCellText(tr);
-
-                if (rowText.contains("Players Online:")) {
-                    online = parseIntSafe(value);
-                    continue;
-                }
-
-                if (rowText.contains("Creation Date:") && world.getCreationDate() == null) {
-                    DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-                            .appendPattern("MMMM uuuu")
-                            .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
-                            .toFormatter(Locale.ENGLISH);
-                    world.setCreationDate(LocalDate.parse(value, formatter));
-                    continue;
-                }
-
-                if (rowText.contains("Online Record:") && world.getOnlineRecord() == null) {
-                    world.setOnlineRecord(value);
-                    continue;
-                }
-
-                if (rowText.contains("PvP Type:") && world.getPvpType() == null) {
-                    world.setPvpType(value);
-                    continue;
-                }
-
-                if (rowText.contains("Transfer Type:")) {
-                    world.setTransferType(value);
-                    continue;
-                }
-
-                if (rowText.contains("Game World Type:")) {
-                    world.setGameWorldType(value);
-                }
-            }
-
-            Elements rowsT2 = doc.select("table.Table2 div.InnerTableContainer tr");
-            for (Element tr : rowsT2) {
-                String rowText = tr.text();
-                if (rowText.contains("Name [sort] Level [sort] Vocation [sort]")) {
-                    continue;
-                }
-
-                Elements cols = tr.select("> td");
-                if (cols.isEmpty()) {
-                    continue;
-                }
-
-                String name = tr.select("a[href*=?name=]").text().trim();
-                if (name.isBlank()) {
-                    continue;
-                }
-
-                Integer level = cols.size() > 1 ? parseIntegerOrNull(cols.get(1).text()) : null;
-                String vocation = cols.size() > 2 ? blankToNull(cols.get(2).text()) : null;
-
-                players.add(new OnlineCharacterSnapshot(name, level, vocation));
-            }
-
-            return new WorldOnline(
-                    worldName,
-                    online,
-                    players,
-                    world.getOnlineRecord(),
-                    world.getCreationDate(),
-                    world.getTransferType(),
-                    world.getGameWorldType()
-            );
+            return parseWorldPageDocument(doc, worldName, world);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    WorldOnline parseWorldPageDocument(Document doc, String worldName, World world) {
+        int online = 0;
+        List<OnlineCharacterSnapshot> players = new ArrayList<>();
+
+        Elements rowsT1 = doc.select("table.Table1 div.InnerTableContainer tbody tr");
+        for (Element tr : rowsT1) {
+            String rowText = tr.text();
+            String value = lastCellText(tr);
+
+            if (rowText.contains("Players Online:")) {
+                online = parseIntSafe(value);
+                continue;
+            }
+
+            if (rowText.contains("Creation Date:") && world.getCreationDate() == null) {
+                DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                        .appendPattern("MMMM uuuu")
+                        .parseDefaulting(ChronoField.DAY_OF_MONTH, 1)
+                        .toFormatter(Locale.ENGLISH);
+                world.setCreationDate(LocalDate.parse(value, formatter));
+                continue;
+            }
+
+            if (rowText.contains("Online Record:") && world.getOnlineRecord() == null) {
+                world.setOnlineRecord(value);
+                continue;
+            }
+
+            if (rowText.contains("PvP Type:") && world.getPvpType() == null) {
+                world.setPvpType(value);
+                continue;
+            }
+
+            if (rowText.contains("Transfer Type:")) {
+                world.setTransferType(value);
+                continue;
+            }
+
+            if (rowText.contains("Game World Type:")) {
+                world.setGameWorldType(value);
+            }
+        }
+
+        Elements rowsT2 = doc.select("table.Table2 div.InnerTableContainer tr, table.Table2 tr");
+        for (Element tr : rowsT2) {
+            String rowText = tr.text();
+            if (rowText.contains("Name [sort] Level [sort] Vocation [sort]")) {
+                continue;
+            }
+
+            Elements cols = tr.select("> td");
+            if (cols.isEmpty()) {
+                continue;
+            }
+
+            String name = tr.select("a[href*=name=]").text().trim();
+            if (name.isBlank()) {
+                continue;
+            }
+
+            Integer level = cols.size() > 1 ? parseIntegerOrNull(cols.get(1).text()) : null;
+            String vocation = cols.size() > 2 ? blankToNull(cols.get(2).text()) : null;
+
+            players.add(new OnlineCharacterSnapshot(name, level, vocation));
+        }
+
+        return new WorldOnline(
+                worldName,
+                online,
+                players,
+                world.getOnlineRecord(),
+                world.getCreationDate(),
+                world.getTransferType(),
+                world.getGameWorldType()
+        );
     }
 
     @Override
