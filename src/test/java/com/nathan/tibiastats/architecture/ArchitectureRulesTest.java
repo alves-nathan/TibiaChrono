@@ -121,4 +121,13 @@ class ArchitectureRulesTest {
                     "java.sql.."
             );
 
+
+    @ArchTest
+    static final ArchRule world_online_analytics_service_should_remain_a_facade_without_direct_jdbc = noClasses()
+            .that().haveSimpleName("WorldOnlineAnalyticsService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.springframework.jdbc..",
+                    "java.sql.."
+            );
+
 }
