@@ -103,4 +103,13 @@ class ArchitectureRulesTest {
             .that().haveSimpleName("HighscoreService")
             .should().dependOnClassesThat().resideInAnyPackage("..domain.port..");
 
+
+    @ArchTest
+    static final ArchRule character_timeline_service_should_remain_a_facade_without_direct_jdbc = noClasses()
+            .that().haveSimpleName("CharacterTimelineService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.springframework.jdbc..",
+                    "java.sql.."
+            );
+
 }

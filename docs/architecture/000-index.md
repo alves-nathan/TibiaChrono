@@ -31,3 +31,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0009 - Split highscore orchestration helpers out of HighscoreService](adr/ADR-0009-highscore-orchestration-service-split.md)
 - [ADR-0010 - Split highscore character resolution and retry policy from orchestration](adr/ADR-0010-highscore-character-resolution-and-retry-policy.md)
 - [ADR-0011 - Keep HighscoreService as orchestration only](adr/ADR-0011-highscore-service-as-orchestrator.md)
+- [ADR-0012: CharacterTimelineService as a read-model facade](adr/ADR-0012-character-timeline-read-model-facade.md)
