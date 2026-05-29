@@ -157,4 +157,13 @@ class ArchitectureRulesTest {
                     "..infrastructure.persistence.."
             );
 
+
+    @ArchTest
+    static final ArchRule guild_query_service_should_remain_a_facade_without_direct_repositories_or_ports = noClasses()
+            .that().haveSimpleName("GuildQueryService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..domain.port..",
+                    "..infrastructure.persistence.."
+            );
+
 }

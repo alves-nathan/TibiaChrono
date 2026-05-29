@@ -1,6 +1,7 @@
 package com.nathan.tibiastats.infrastructure.adapter.web.rest;
 
 import com.nathan.tibiastats.application.query.GuildQueryService;
+import com.nathan.tibiastats.application.query.GuildQueryViews;
 import com.nathan.tibiastats.application.service.GuildScrapeService;
 import com.nathan.tibiastats.domain.model.GuildMembershipEventType;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -22,7 +23,7 @@ public class GuildController {
     }
 
     @GetMapping("/api/guilds")
-    public List<GuildQueryService.GuildView> listGuilds(
+    public List<GuildQueryViews.GuildView> listGuilds(
             @RequestParam(required = false) String world,
             @RequestParam(required = false) Boolean active
     ) {
@@ -30,7 +31,7 @@ public class GuildController {
     }
 
     @GetMapping("/api/guilds/{name}")
-    public GuildQueryService.GuildView getGuild(@PathVariable String name) {
+    public GuildQueryViews.GuildView getGuild(@PathVariable String name) {
         try {
             return guilds.findGuild(name);
         } catch (IllegalArgumentException e) {
@@ -39,7 +40,7 @@ public class GuildController {
     }
 
     @GetMapping("/api/guilds/{name}/members")
-    public List<GuildQueryService.GuildMemberView> getGuildMembers(
+    public List<GuildQueryViews.GuildMemberView> getGuildMembers(
             @PathVariable String name,
             @RequestParam(required = false, defaultValue = "true") Boolean active
     ) {
@@ -51,7 +52,7 @@ public class GuildController {
     }
 
     @GetMapping("/api/guilds/{name}/events")
-    public List<GuildQueryService.GuildMembershipEventView> getGuildEvents(
+    public List<GuildQueryViews.GuildMembershipEventView> getGuildEvents(
             @PathVariable String name,
             @RequestParam(required = false) GuildMembershipEventType type,
             @RequestParam(required = false) String characterName,

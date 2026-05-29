@@ -172,7 +172,11 @@ public class SpringGuildRepository {
     }
 
     public List<GuildMembership> findMemberships(Guild guild, Boolean active) {
-        return memberships.findByGuildId(guild.getId(), active);
+        return findMemberships(guild.getId(), active);
+    }
+
+    public List<GuildMembership> findMemberships(Long guildId, Boolean active) {
+        return memberships.findByGuildId(guildId, active);
     }
 
     public List<GuildMembership> findMembershipHistory(Long characterId) {
