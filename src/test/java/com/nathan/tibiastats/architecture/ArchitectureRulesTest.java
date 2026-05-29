@@ -97,4 +97,10 @@ class ArchitectureRulesTest {
                     "org.springframework.jdbc.."
             );
 
+
+    @ArchTest
+    static final ArchRule highscore_service_should_remain_an_orchestrator_without_direct_domain_ports = noClasses()
+            .that().haveSimpleName("HighscoreService")
+            .should().dependOnClassesThat().resideInAnyPackage("..domain.port..");
+
 }

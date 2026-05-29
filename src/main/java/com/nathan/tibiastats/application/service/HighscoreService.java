@@ -1,10 +1,6 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
-import com.nathan.tibiastats.domain.model.StatCategory;
-import com.nathan.tibiastats.domain.model.World;
-import com.nathan.tibiastats.domain.port.HighscorePort;
-import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
 import com.nathan.tibiastats.infrastructure.persistence.HighscoreScrapeStateRepository;
 import com.nathan.tibiastats.infrastructure.persistence.HighscoreStatRecordWriter;
 import org.slf4j.Logger;
@@ -32,35 +28,32 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HighscoreService {
     private static final Logger log = LoggerFactory.getLogger(HighscoreService.class);
     private static final ZoneId SNAPSHOT_ZONE = ZoneId.of("America/Sao_Paulo");
-    private final HighscorePort highscorePort;
-    private final WorldRepositoryPort worldRepository;
+    private final HighscorePageFetcher pageFetcher;
+    private final HighscoreScopePlanner scopePlanner;
     private final HighscoreCharacterResolver characterResolver;
     private final HighscoreScrapeProperties properties;
     private final HighscoreScrapeStateRepository stateRepository;
     private final HighscoreHttpBackoffCoordinator httpBackoffCoordinator;
-    private final HighscoreRequestThrottle requestThrottle;
     private final HighscoreFetchRetryPolicy retryPolicy;
     private final HighscoreStatRecordWriter statRecordWriter;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public HighscoreService(
-            HighscorePort highscorePort,
-            WorldRepositoryPort worldRepository,
+            HighscorePageFetcher pageFetcher,
+            HighscoreScopePlanner scopePlanner,
             HighscoreCharacterResolver characterResolver,
             HighscoreScrapeProperties properties,
             HighscoreScrapeStateRepository stateRepository,
             HighscoreHttpBackoffCoordinator httpBackoffCoordinator,
-            HighscoreRequestThrottle requestThrottle,
             HighscoreFetchRetryPolicy retryPolicy,
             HighscoreStatRecordWriter statRecordWriter
     ) {
-        this.highscorePort = highscorePort;
-        this.worldRepository = worldRepository;
+        this.pageFetcher = pageFetcher;
+        this.scopePlanner = scopePlanner;
         this.characterResolver = characterResolver;
         this.properties = properties;
         this.stateRepository = stateRepository;
         this.httpBackoffCoordinator = httpBackoffCoordinator;
-        this.requestThrottle = requestThrottle;
         this.retryPolicy = retryPolicy;
         this.statRecordWriter = statRecordWriter;
     }
@@ -109,30 +102,18 @@ public class HighscoreService {
     }
 
     private ScrapeJobResult runIncrementalHighscoreScrape(Instant startedAt, String planName, HighscoreScrapeProperties.Plan plan) {
-        List<World> worlds = worldRepository.findAll().stream()
-                .sorted(Comparator.comparing(World::getName, String.CASE_INSENSITIVE_ORDER))
-                .limit(plan.getWorldLimit() > 0 ? plan.getWorldLimit() : Long.MAX_VALUE)
-                .toList();
-        List<StatCategory> categories = plan.categoryList();
-        List<Integer> vocationFilterIds = plan.vocationFilterIds();
-
-        if (worlds.isEmpty()) {
+        HighscoreScopePlanner.HighscoreScopeSelection scopeSelection = scopePlanner.selectScopes(plan);
+        if (!scopeSelection.hasWorlds()) {
             log.warn("[HIGHSCORE_SCRAPER] No worlds found. Run the world scraper first.");
             return ScrapeJobResult.empty();
         }
 
-        stateRepository.registerScopes(worlds, categories, vocationFilterIds);
-        List<HighscoreScope> scopes = stateRepository.findNextScopes(
-                worlds,
-                categories,
-                vocationFilterIds,
-                plan.getScopesPerRun()
-        );
-
-        if (scopes.isEmpty()) {
+        if (!scopeSelection.hasScopes()) {
             log.info("[HIGHSCORE_SCRAPER] No eligible highscore scopes found.");
             return ScrapeJobResult.empty();
         }
+
+        List<HighscoreScope> scopes = scopeSelection.scopes();
 
         log.info(
                 "[HIGHSCORE_SCRAPER] Starting run: plan={}, selectedScopes={}, scopesPerRun={}, allScopesPerRun={}, scopeWorkers={}, requestParallelism={}, pageWindowSize={}, maxPages={}, pageDelayMs={}, requestMaxAttempts={}, retryBaseDelayMs={}, retryMaxDelayMs={}, forbiddenCooldownMs={}, forbiddenInitialCooldownMs={}, forbiddenMaxCooldownMs={}, forbiddenCooldownMultiplier={}, requestJitterMs={}, requestMinIntervalMs={}, cooldownLogIntervalMs={}, progressLogIntervalScopes={}, worlds={}, categories={}, vocations={}, abortRunOnForbidden={}",
@@ -156,9 +137,9 @@ public class HighscoreService {
                 plan.getRequestMinIntervalMs(),
                 plan.getCooldownLogIntervalMs(),
                 plan.getProgressLogIntervalScopes(),
-                worlds.size(),
-                categories.size(),
-                vocationFilterIds.size(),
+                scopeSelection.worldCount(),
+                scopeSelection.categoryCount(),
+                scopeSelection.vocationCount(),
                 plan.isAbortRunOnForbidden()
         );
 
@@ -314,15 +295,15 @@ public class HighscoreService {
             while (page <= plan.getMaxPages() && !shouldStop) {
                 int windowStart = page;
                 int windowEnd = Math.min(plan.getMaxPages(), windowStart + plan.getPageWindowSize() - 1);
-                List<Future<PageResult>> pageFutures = new ArrayList<>();
+                List<Future<HighscorePageFetcher.PageResult>> pageFutures = new ArrayList<>();
 
                 for (int currentPage = windowStart; currentPage <= windowEnd; currentPage++) {
                     int pageToFetch = currentPage;
-                    pageFutures.add(executor.submit(() -> fetchPage(scope, pageToFetch, requestSemaphore, plan, rateLimited)));
+                    pageFutures.add(executor.submit(() -> pageFetcher.fetchPage(scope, pageToFetch, requestSemaphore, plan, rateLimited)));
                 }
 
-                List<PageResult> pageResults = new ArrayList<>(pageFutures.size());
-                for (Future<PageResult> pageFuture : pageFutures) {
+                List<HighscorePageFetcher.PageResult> pageResults = new ArrayList<>(pageFutures.size());
+                for (Future<HighscorePageFetcher.PageResult> pageFuture : pageFutures) {
                     try {
                         pageResults.add(pageFuture.get());
                     } catch (ExecutionException ex) {
@@ -336,17 +317,17 @@ public class HighscoreService {
                         throw ex;
                     }
                 }
-                pageResults.sort(Comparator.comparingInt(PageResult::page));
+                pageResults.sort(Comparator.comparingInt(HighscorePageFetcher.PageResult::page));
 
                 List<HighscoreStatRecordWriter.HighscoreStatRow> windowStatRows = new ArrayList<>();
-                for (PageResult pageResult : pageResults) {
+                for (HighscorePageFetcher.PageResult pageResult : pageResults) {
                     if (pageResult.rows().isEmpty()) {
                         shouldStop = true;
                         break;
                     }
 
                     pages++;
-                    for (HighscorePort.HighscoreRow row : pageResult.rows()) {
+                    for (var row : pageResult.rows()) {
                         String characterName = characterResolver.normalizeCharacterName(row.name());
                         if (characterName.isBlank()) {
                             continue;
@@ -405,74 +386,8 @@ public class HighscoreService {
         }
     }
 
-    private PageResult fetchPage(HighscoreScope scope, int page, Semaphore requestSemaphore, HighscoreScrapeProperties.Plan plan, AtomicBoolean rateLimited) throws InterruptedException {
-        int maxAttempts = plan.getRequestMaxAttempts();
-        RuntimeException lastFailure = null;
 
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            if (rateLimited.get()) {
-                throw new RateLimitedHighscoreException("Highscore run already marked as rate-limited");
-            }
-            requestSemaphore.acquire();
-            try {
-                httpBackoffCoordinator.awaitCooldown(plan);
-                requestThrottle.awaitBeforeRequest(plan);
-                List<HighscorePort.HighscoreRow> rows = highscorePort.fetchHighscores(
-                        scope.worldName(),
-                        scope.category(),
-                        scope.vocationFilterId(),
-                        page
-                );
-                return new PageResult(page, rows);
-            } catch (RuntimeException ex) {
-                lastFailure = ex;
-                boolean transientFailure = retryPolicy.isTransientHighscoreFetchFailure(ex);
-                boolean shouldRetry = transientFailure && attempt < maxAttempts;
-
-                if (retryPolicy.isForbiddenOrRateLimited(ex)) {
-                    httpBackoffCoordinator.activate(plan, retryPolicy.rootMessage(ex));
-                    if (plan.isAbortRunOnForbidden()) {
-                        rateLimited.set(true);
-                        throw new RateLimitedHighscoreException(retryPolicy.rootMessage(ex), ex);
-                    }
-                }
-
-                if (!shouldRetry) {
-                    throw ex;
-                }
-
-                long retryDelayMs = retryPolicy.retryDelayMs(plan, attempt, ex);
-                log.warn(
-                        "[HIGHSCORE_SCRAPER] Transient page fetch failure. Retrying: scope={}, page={}, attempt={}/{}, delayMs={}, error={}",
-                        scope.label(),
-                        page,
-                        attempt,
-                        maxAttempts,
-                        retryDelayMs,
-                        retryPolicy.rootMessage(ex)
-                );
-                retryPolicy.sleepWithRetryHeartbeat(plan, retryDelayMs, scope, page, attempt, maxAttempts);
-            } finally {
-                requestSemaphore.release();
-            }
-        }
-
-        throw lastFailure == null
-                ? new IllegalStateException("Failed to fetch highscore page after retries")
-                : lastFailure;
-    }
-
-    private static class RateLimitedHighscoreException extends RuntimeException {
-        RateLimitedHighscoreException(String message) {
-            super(message);
-        }
-
-        RateLimitedHighscoreException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
 
     private record ScopeResult(String status, int pages, int rows) {}
-    private record PageResult(int page, List<HighscorePort.HighscoreRow> rows) {}
     private record WorkerResult(int successScopes, int emptyScopes, int failedScopes, int pages, int rows) {}
 }
