@@ -1,7 +1,7 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.ScrapeJobExecution;
-import com.nathan.tibiastats.infrastructure.persistence.ScrapeJobExecutionRepository;
+import com.nathan.tibiastats.domain.port.ScrapeJobExecutionRepositoryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +16,9 @@ public class ScrapeJobService {
     public static final String HIGHSCORE_SCRAPER = "HIGHSCORE_SCRAPER";
     public static final String GUILD_SCRAPER = "GUILD_SCRAPER";
 
-    private final ScrapeJobExecutionRepository repository;
+    private final ScrapeJobExecutionRepositoryPort repository;
 
-    public ScrapeJobService(ScrapeJobExecutionRepository repository) {
+    public ScrapeJobService(ScrapeJobExecutionRepositoryPort repository) {
         this.repository = repository;
     }
 
