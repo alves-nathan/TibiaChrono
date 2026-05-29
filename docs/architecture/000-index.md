@@ -35,3 +35,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0013: HighscoreApiQueryService as a read-model facade](adr/ADR-0013-highscore-api-query-service-as-read-model-facade.md)
 - [ADR-0014: WorldOnlineAnalyticsService as a read-model facade](adr/ADR-0014-world-online-analytics-read-model-facade.md)
 - [ADR-0015: GuildScrapeService as an orchestration facade](adr/ADR-0015-guild-scrape-service-as-orchestrator.md)
+- [ADR-0016: ScrapeService as world scrape orchestration facade](adr/ADR-0016-scrape-service-as-world-scrape-orchestrator.md)

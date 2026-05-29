@@ -139,4 +139,13 @@ class ArchitectureRulesTest {
                     "..infrastructure.persistence.."
             );
 
+
+    @ArchTest
+    static final ArchRule scrape_service_should_remain_an_orchestrator_without_direct_repositories_or_ports = noClasses()
+            .that().haveSimpleName("ScrapeService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..domain.port..",
+                    "..infrastructure.persistence.."
+            );
+
 }
