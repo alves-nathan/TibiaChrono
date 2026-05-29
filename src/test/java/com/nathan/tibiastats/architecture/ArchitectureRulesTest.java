@@ -148,4 +148,13 @@ class ArchitectureRulesTest {
                     "..infrastructure.persistence.."
             );
 
+
+    @ArchTest
+    static final ArchRule character_naming_service_should_remain_a_facade_without_direct_repositories_or_ports = noClasses()
+            .that().haveSimpleName("CharacterNamingService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..domain.port..",
+                    "..infrastructure.persistence.."
+            );
+
 }
