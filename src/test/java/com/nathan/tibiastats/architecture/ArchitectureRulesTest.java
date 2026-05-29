@@ -175,4 +175,21 @@ class ArchitectureRulesTest {
                     "org.jsoup.select.."
             );
 
+    @ArchTest
+    static final ArchRule jsoup_world_adapter_should_remain_transport_only_without_dom_parsing_details = noClasses()
+            .that().haveSimpleName("JsoupScrapeAdapter")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.jsoup.nodes..",
+                    "org.jsoup.select.."
+            );
+
+
+    @ArchTest
+    static final ArchRule jsoup_character_adapter_should_remain_transport_only_without_dom_parsing_details = noClasses()
+            .that().haveSimpleName("JsoupCharacterAdapter")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.jsoup.nodes..",
+                    "org.jsoup.select.."
+            );
+
 }
