@@ -194,6 +194,15 @@ class ArchitectureRulesTest {
 
 
     @ArchTest
+    static final ArchRule jsoup_highscore_adapter_should_remain_transport_only_without_dom_parsing_details = noClasses()
+            .that().haveSimpleName("JsoupHighscoreAdapter")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.jsoup.nodes..",
+                    "org.jsoup.select.."
+            );
+
+
+    @ArchTest
     static final ArchRule application_should_access_guild_persistence_through_domain_ports = noClasses()
             .that().resideInAPackage("..application..")
             .should().dependOnClassesThat().haveFullyQualifiedName(
