@@ -130,4 +130,13 @@ class ArchitectureRulesTest {
                     "java.sql.."
             );
 
+
+    @ArchTest
+    static final ArchRule guild_scrape_service_should_remain_an_orchestrator_without_direct_repositories_or_ports = noClasses()
+            .that().haveSimpleName("GuildScrapeService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..domain.port..",
+                    "..infrastructure.persistence.."
+            );
+
 }
