@@ -1,0 +1,14 @@
+# Clean export rules
+patches export-ignore
+patches/** export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
+.idea/** export-ignore
+.test-maven/** export-ignore
+target/** export-ignore
+*.bak export-ignore
+*.bak-* export-ignore
+*.bak.* export-ignore
+*.zip export-ignore
+*.log export-ignore
+*Zone.Identifier* export-ignore

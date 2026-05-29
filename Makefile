@@ -43,6 +43,7 @@ help:
 	@echo "  make audit-worktree - list local/generated artifacts that should not be committed"
 	@echo "  make clean-local-artifacts - remove local/generated artifacts from the working tree"
 	@echo "  make export-clean   - create a clean ZIP export without local artifacts"
+	@echo "  make verify-export-clean - verify clean ZIP export matches the current working tree"
 	@echo "  make code-health   - print class-size and architecture hotspot report"
 
 # ---- Prod-like ----
@@ -177,10 +178,11 @@ clean-local-artifacts:
 .PHONY: export-clean
 export-clean:
 	./scripts/export-clean.sh
+	./scripts/verify-clean-export.sh TibiaChrono-clean.zip
 
-.PHONY: code-health
-code-health:
-	./scripts/code-health-report.sh
+.PHONY: verify-export-clean
+verify-export-clean:
+	./scripts/verify-clean-export.sh TibiaChrono-clean.zip
 
 
 # ---- Quality gates ----

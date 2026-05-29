@@ -210,3 +210,6 @@ patches/.backups/
 *.bak.*
 *Zone.Identifier*
 TibiaChrono-clean.zip
+
+# Patch delivery scripts are local operational artifacts.
+/patches/
