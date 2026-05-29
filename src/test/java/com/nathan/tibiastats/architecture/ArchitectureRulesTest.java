@@ -166,4 +166,13 @@ class ArchitectureRulesTest {
                     "..infrastructure.persistence.."
             );
 
+
+    @ArchTest
+    static final ArchRule jsoup_guild_adapter_should_remain_transport_only_without_dom_parsing_details = noClasses()
+            .that().haveSimpleName("JsoupGuildAdapter")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.jsoup.nodes..",
+                    "org.jsoup.select.."
+            );
+
 }
