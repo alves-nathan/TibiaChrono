@@ -1,7 +1,6 @@
 package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.config.HighscoreScrapeProperties;
-import com.nathan.tibiastats.domain.model.CharacterEntity;
 import com.nathan.tibiastats.domain.model.StatCategory;
 import com.nathan.tibiastats.domain.model.World;
 import com.nathan.tibiastats.domain.port.HighscorePort;
@@ -12,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.text.Normalizer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,7 +18,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -28,47 +25,43 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 
 @Service
 public class HighscoreService {
     private static final Logger log = LoggerFactory.getLogger(HighscoreService.class);
     private static final ZoneId SNAPSHOT_ZONE = ZoneId.of("America/Sao_Paulo");
-    private static final Pattern TRADED_TAG = Pattern.compile("\\s*\\(\\s*traded\\s*\\)\\s*$", Pattern.CASE_INSENSITIVE);
-
     private final HighscorePort highscorePort;
     private final WorldRepositoryPort worldRepository;
-    private final CharacterNamingService namingService;
+    private final HighscoreCharacterResolver characterResolver;
     private final HighscoreScrapeProperties properties;
     private final HighscoreScrapeStateRepository stateRepository;
     private final HighscoreHttpBackoffCoordinator httpBackoffCoordinator;
     private final HighscoreRequestThrottle requestThrottle;
+    private final HighscoreFetchRetryPolicy retryPolicy;
     private final HighscoreStatRecordWriter statRecordWriter;
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicLong lastRetrySleepLogAtMs = new AtomicLong(0);
-    private final Map<String, Object> nameLocks = new ConcurrentHashMap<>();
 
     public HighscoreService(
             HighscorePort highscorePort,
             WorldRepositoryPort worldRepository,
-            CharacterNamingService namingService,
+            HighscoreCharacterResolver characterResolver,
             HighscoreScrapeProperties properties,
             HighscoreScrapeStateRepository stateRepository,
             HighscoreHttpBackoffCoordinator httpBackoffCoordinator,
             HighscoreRequestThrottle requestThrottle,
+            HighscoreFetchRetryPolicy retryPolicy,
             HighscoreStatRecordWriter statRecordWriter
     ) {
         this.highscorePort = highscorePort;
         this.worldRepository = worldRepository;
-        this.namingService = namingService;
+        this.characterResolver = characterResolver;
         this.properties = properties;
         this.stateRepository = stateRepository;
         this.httpBackoffCoordinator = httpBackoffCoordinator;
         this.requestThrottle = requestThrottle;
+        this.retryPolicy = retryPolicy;
         this.statRecordWriter = statRecordWriter;
     }
 
@@ -354,11 +347,11 @@ public class HighscoreService {
 
                     pages++;
                     for (HighscorePort.HighscoreRow row : pageResult.rows()) {
-                        String normalizedName = normalizeCharacterName(row.name());
-                        if (normalizedName.isBlank()) {
+                        String characterName = characterResolver.normalizeCharacterName(row.name());
+                        if (characterName.isBlank()) {
                             continue;
                         }
-                        Long characterId = resolveCharacterId(normalizedName, characterIdCache);
+                        Long characterId = characterResolver.resolveCharacterId(characterName, characterIdCache);
                         windowStatRows.add(new HighscoreStatRecordWriter.HighscoreStatRow(
                                 characterId,
                                 scope.worldId(),
@@ -399,15 +392,15 @@ public class HighscoreService {
         } catch (RateLimitedHighscoreException ex) {
             long durationMs = Duration.between(startedAt, Instant.now()).toMillis();
             rateLimited.set(true);
-            stateRepository.markFinished(scope, "RATE_LIMITED", pages, rows, durationMs, rootMessage(ex));
+            stateRepository.markFinished(scope, "RATE_LIMITED", pages, rows, durationMs, retryPolicy.rootMessage(ex));
             log.warn("[HIGHSCORE_SCRAPER] Scope rate-limited: plan={}, scope={}, pages={}, rows={}, durationMs={}, error={}",
-                    planName, scope.label(), pages, rows, durationMs, rootMessage(ex));
+                    planName, scope.label(), pages, rows, durationMs, retryPolicy.rootMessage(ex));
             return new ScopeResult("RATE_LIMITED", pages, rows);
         } catch (Exception ex) {
             long durationMs = Duration.between(startedAt, Instant.now()).toMillis();
-            stateRepository.markFinished(scope, "FAILED", pages, rows, durationMs, rootMessage(ex));
+            stateRepository.markFinished(scope, "FAILED", pages, rows, durationMs, retryPolicy.rootMessage(ex));
             log.error("[HIGHSCORE_SCRAPER] Scope failed: plan={}, scope={}, pages={}, rows={}, durationMs={}, error={}",
-                    planName, scope.label(), pages, rows, durationMs, rootMessage(ex), ex);
+                    planName, scope.label(), pages, rows, durationMs, retryPolicy.rootMessage(ex), ex);
             return new ScopeResult("FAILED", pages, rows);
         }
     }
@@ -433,14 +426,14 @@ public class HighscoreService {
                 return new PageResult(page, rows);
             } catch (RuntimeException ex) {
                 lastFailure = ex;
-                boolean transientFailure = isTransientHighscoreFetchFailure(ex);
+                boolean transientFailure = retryPolicy.isTransientHighscoreFetchFailure(ex);
                 boolean shouldRetry = transientFailure && attempt < maxAttempts;
 
-                if (isForbiddenOrRateLimited(ex)) {
-                    httpBackoffCoordinator.activate(plan, rootMessage(ex));
+                if (retryPolicy.isForbiddenOrRateLimited(ex)) {
+                    httpBackoffCoordinator.activate(plan, retryPolicy.rootMessage(ex));
                     if (plan.isAbortRunOnForbidden()) {
                         rateLimited.set(true);
-                        throw new RateLimitedHighscoreException(rootMessage(ex), ex);
+                        throw new RateLimitedHighscoreException(retryPolicy.rootMessage(ex), ex);
                     }
                 }
 
@@ -448,7 +441,7 @@ public class HighscoreService {
                     throw ex;
                 }
 
-                long retryDelayMs = retryDelayMs(plan, attempt, ex);
+                long retryDelayMs = retryPolicy.retryDelayMs(plan, attempt, ex);
                 log.warn(
                         "[HIGHSCORE_SCRAPER] Transient page fetch failure. Retrying: scope={}, page={}, attempt={}/{}, delayMs={}, error={}",
                         scope.label(),
@@ -456,9 +449,9 @@ public class HighscoreService {
                         attempt,
                         maxAttempts,
                         retryDelayMs,
-                        rootMessage(ex)
+                        retryPolicy.rootMessage(ex)
                 );
-                sleepWithRetryHeartbeat(plan, retryDelayMs, scope, page, attempt, maxAttempts);
+                retryPolicy.sleepWithRetryHeartbeat(plan, retryDelayMs, scope, page, attempt, maxAttempts);
             } finally {
                 requestSemaphore.release();
             }
@@ -467,117 +460,6 @@ public class HighscoreService {
         throw lastFailure == null
                 ? new IllegalStateException("Failed to fetch highscore page after retries")
                 : lastFailure;
-    }
-
-    private Long resolveCharacterId(String characterName, Map<String, Long> characterIdCache) {
-        String key = normalizeLookupKey(characterName);
-        return characterIdCache.computeIfAbsent(key, ignored -> {
-            Object lock = nameLocks.computeIfAbsent(key, unused -> new Object());
-            synchronized (lock) {
-                CharacterEntity character = namingService.ensureCharacterForName(characterName, characterName);
-                if (character.getId() == null) {
-                    throw new IllegalStateException("Character was resolved without id: " + characterName);
-                }
-                return character.getId();
-            }
-        });
-    }
-
-    private String normalizeCharacterName(String value) {
-        if (value == null) {
-            return "";
-        }
-        return TRADED_TAG.matcher(value).replaceAll("").replaceAll("\\s+", " ").trim();
-    }
-
-    private String normalizeLookupKey(String value) {
-        String cleaned = normalizeCharacterName(value).toLowerCase(Locale.ROOT);
-        return Normalizer.normalize(cleaned, Normalizer.Form.NFKC);
-    }
-
-    private void sleepWithRetryHeartbeat(HighscoreScrapeProperties.Plan plan, long delayMs, HighscoreScope scope, int page, int attempt, int maxAttempts) {
-        if (delayMs <= 0) {
-            return;
-        }
-
-        long deadline = System.currentTimeMillis() + delayMs;
-        while (true) {
-            long now = System.currentTimeMillis();
-            long remainingMs = deadline - now;
-            if (remainingMs <= 0) {
-                return;
-            }
-
-            long intervalMs = plan.getCooldownLogIntervalMs();
-            long lastLog = lastRetrySleepLogAtMs.get();
-            if (intervalMs > 0 && now - lastLog >= intervalMs && lastRetrySleepLogAtMs.compareAndSet(lastLog, now)) {
-                log.info(
-                        "[HIGHSCORE_SCRAPER] Waiting before retry: scope={}, page={}, attempt={}/{}, remainingMs={}",
-                        scope.label(),
-                        page,
-                        attempt,
-                        maxAttempts,
-                        remainingMs
-                );
-            }
-            sleepMs(Math.min(remainingMs, 1000));
-        }
-    }
-
-    private long retryDelayMs(HighscoreScrapeProperties.Plan plan, int attempt, RuntimeException ex) {
-        long base = Math.max(0, plan.getRetryBaseDelayMs());
-        long max = Math.max(base, plan.getRetryMaxDelayMs());
-        long exponential = base <= 0 ? 0 : base * (1L << Math.min(attempt - 1, 5));
-        long delay = Math.min(max, exponential);
-
-        if (isForbiddenOrRateLimited(ex)) {
-            delay = Math.max(delay, Math.min(max, plan.getForbiddenInitialCooldownMs()));
-        }
-
-        int jitter = plan.getRequestJitterMs();
-        if (jitter > 0) {
-            delay += ThreadLocalRandom.current().nextInt(jitter + 1);
-        }
-        return delay;
-    }
-
-    private boolean isTransientHighscoreFetchFailure(Throwable throwable) {
-        String message = rootMessage(throwable).toLowerCase(Locale.ROOT);
-        return message.contains("http 403")
-                || message.contains("http 429")
-                || message.contains("http 500")
-                || message.contains("http 502")
-                || message.contains("http 503")
-                || message.contains("http 504")
-                || message.contains("timed out")
-                || message.contains("timeout")
-                || message.contains("connection reset")
-                || message.contains("connection refused");
-    }
-
-    private boolean isForbiddenOrRateLimited(Throwable throwable) {
-        String message = rootMessage(throwable).toLowerCase(Locale.ROOT);
-        return message.contains("http 403") || message.contains("http 429");
-    }
-
-    private void sleepMs(long delayMs) {
-        if (delayMs <= 0) {
-            return;
-        }
-        try {
-            Thread.sleep(delayMs);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while waiting during highscore scrape", ex);
-        }
-    }
-
-    private String rootMessage(Throwable throwable) {
-        Throwable current = throwable;
-        while (current.getCause() != null) {
-            current = current.getCause();
-        }
-        return current.getMessage() == null ? current.toString() : current.getMessage();
     }
 
     private static class RateLimitedHighscoreException extends RuntimeException {

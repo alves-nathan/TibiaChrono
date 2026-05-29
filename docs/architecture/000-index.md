@@ -29,3 +29,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 ## Architecture Decision Records
 
 - [ADR-0009 - Split highscore orchestration helpers out of HighscoreService](adr/ADR-0009-highscore-orchestration-service-split.md)
+- [ADR-0010 - Split highscore character resolution and retry policy from orchestration](adr/ADR-0010-highscore-character-resolution-and-retry-policy.md)
