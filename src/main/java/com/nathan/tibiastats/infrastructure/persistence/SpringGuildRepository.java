@@ -1,6 +1,11 @@
 package com.nathan.tibiastats.infrastructure.persistence;
 
 import com.nathan.tibiastats.domain.model.*;
+import com.nathan.tibiastats.domain.port.GuildCatalogRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildInviteRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildMembershipEventRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildMembershipRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildSnapshotRepositoryPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -125,7 +130,7 @@ interface GuildInviteJpa extends JpaRepository<GuildInvite, Long> {
 }
 
 @Repository
-public class SpringGuildRepository {
+public class SpringGuildRepository implements GuildCatalogRepositoryPort, GuildSnapshotRepositoryPort, GuildMembershipRepositoryPort, GuildMembershipEventRepositoryPort, GuildInviteRepositoryPort {
     private final GuildJpa guilds;
     private final GuildSnapshotJpa snapshots;
     private final GuildMembershipJpa memberships;

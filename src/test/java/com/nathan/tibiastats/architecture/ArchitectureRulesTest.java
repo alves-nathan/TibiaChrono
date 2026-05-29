@@ -192,4 +192,12 @@ class ArchitectureRulesTest {
                     "org.jsoup.select.."
             );
 
+
+    @ArchTest
+    static final ArchRule application_should_access_guild_persistence_through_domain_ports = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository"
+            );
+
 }

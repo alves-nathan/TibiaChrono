@@ -2,8 +2,8 @@ package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.Guild;
 import com.nathan.tibiastats.domain.model.World;
+import com.nathan.tibiastats.domain.port.GuildCatalogRepositoryPort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
-import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,9 +11,9 @@ import java.util.List;
 @Service
 public class GuildScrapeTargetPlanner {
     private final WorldRepositoryPort worlds;
-    private final SpringGuildRepository guilds;
+    private final GuildCatalogRepositoryPort guilds;
 
-    public GuildScrapeTargetPlanner(WorldRepositoryPort worlds, SpringGuildRepository guilds) {
+    public GuildScrapeTargetPlanner(WorldRepositoryPort worlds, GuildCatalogRepositoryPort guilds) {
         this.worlds = worlds;
         this.guilds = guilds;
     }

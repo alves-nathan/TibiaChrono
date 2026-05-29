@@ -1,16 +1,16 @@
 package com.nathan.tibiastats.application.query;
 
 import com.nathan.tibiastats.domain.model.Guild;
-import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
+import com.nathan.tibiastats.domain.port.GuildCatalogRepositoryPort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @ReadModelComponent
 public class GuildCatalogReadModelService {
-    private final SpringGuildRepository guilds;
+    private final GuildCatalogRepositoryPort guilds;
 
-    public GuildCatalogReadModelService(SpringGuildRepository guilds) {
+    public GuildCatalogReadModelService(GuildCatalogRepositoryPort guilds) {
         this.guilds = guilds;
     }
 

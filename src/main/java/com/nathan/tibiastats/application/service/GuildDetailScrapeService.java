@@ -2,8 +2,12 @@ package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.*;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildCatalogRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildInviteRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildMembershipEventRepositoryPort;
+import com.nathan.tibiastats.domain.port.GuildMembershipRepositoryPort;
 import com.nathan.tibiastats.domain.port.GuildScrapePort;
-import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
+import com.nathan.tibiastats.domain.port.GuildSnapshotRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +25,11 @@ public class GuildDetailScrapeService {
     private static final String LOG_PREFIX = "[GUILD_SCRAPER]";
 
     private final GuildScrapePort scraper;
-    private final SpringGuildRepository guilds;
+    private final GuildCatalogRepositoryPort guilds;
+    private final GuildSnapshotRepositoryPort snapshots;
+    private final GuildMembershipRepositoryPort memberships;
+    private final GuildMembershipEventRepositoryPort membershipEvents;
+    private final GuildInviteRepositoryPort invites;
     private final GuildCatalogService catalog;
     private final CharacterNamingService characterNamingService;
     private final CharacterRepositoryPort characters;
@@ -29,21 +37,33 @@ public class GuildDetailScrapeService {
 
     @Autowired
     public GuildDetailScrapeService(GuildScrapePort scraper,
-                                    SpringGuildRepository guilds,
+                                    GuildCatalogRepositoryPort guilds,
+                                    GuildSnapshotRepositoryPort snapshots,
+                                    GuildMembershipRepositoryPort memberships,
+                                    GuildMembershipEventRepositoryPort membershipEvents,
+                                    GuildInviteRepositoryPort invites,
                                     GuildCatalogService catalog,
                                     CharacterNamingService characterNamingService,
                                     CharacterRepositoryPort characters) {
-        this(scraper, guilds, catalog, characterNamingService, characters, Clock.systemUTC());
+        this(scraper, guilds, snapshots, memberships, membershipEvents, invites, catalog, characterNamingService, characters, Clock.systemUTC());
     }
 
     GuildDetailScrapeService(GuildScrapePort scraper,
-                             SpringGuildRepository guilds,
+                             GuildCatalogRepositoryPort guilds,
+                             GuildSnapshotRepositoryPort snapshots,
+                             GuildMembershipRepositoryPort memberships,
+                             GuildMembershipEventRepositoryPort membershipEvents,
+                             GuildInviteRepositoryPort invites,
                              GuildCatalogService catalog,
                              CharacterNamingService characterNamingService,
                              CharacterRepositoryPort characters,
                              Clock clock) {
         this.scraper = scraper;
         this.guilds = guilds;
+        this.snapshots = snapshots;
+        this.memberships = memberships;
+        this.membershipEvents = membershipEvents;
+        this.invites = invites;
         this.catalog = catalog;
         this.characterNamingService = characterNamingService;
         this.characters = characters;
@@ -74,7 +94,7 @@ public class GuildDetailScrapeService {
 
         saveSnapshot(guild, detail, observedAt);
 
-        Map<Long, GuildMembership> activeBefore = guilds.findActiveMemberships(guild).stream()
+        Map<Long, GuildMembership> activeBefore = memberships.findActiveMemberships(guild).stream()
                 .filter(m -> m.getCharacter() != null && m.getCharacter().getId() != null)
                 .collect(Collectors.toMap(m -> m.getCharacter().getId(), m -> m, (a, b) -> a, LinkedHashMap::new));
 
@@ -95,15 +115,15 @@ public class GuildDetailScrapeService {
             GuildMembership activeFromThisGuild = activeBefore.get(characterId);
             if (activeFromThisGuild != null) {
                 refreshMembership(activeFromThisGuild, member, observedAt);
-                guilds.saveMembership(activeFromThisGuild);
+                memberships.saveMembership(activeFromThisGuild);
                 updated++;
                 continue;
             }
 
-            Optional<GuildMembership> currentActive = guilds.findActiveMembershipForCharacter(characterId);
+            Optional<GuildMembership> currentActive = memberships.findActiveMembershipForCharacter(characterId);
             if (currentActive.isEmpty()) {
                 GuildMembership membership = openMembership(guild, character, member, observedAt);
-                guilds.saveMembership(membership);
+                memberships.saveMembership(membership);
                 saveEvent(character, member.name(), GuildMembershipEventType.JOINED, null, guild, observedAt,
                         "Observed character joining guild " + guild.getName());
                 opened++;
@@ -113,15 +133,15 @@ public class GuildDetailScrapeService {
             GuildMembership active = currentActive.get();
             if (active.getGuild() != null && active.getGuild().getId().equals(guild.getId())) {
                 refreshMembership(active, member, observedAt);
-                guilds.saveMembership(active);
+                memberships.saveMembership(active);
                 updated++;
             } else {
                 Guild previousGuild = active.getGuild();
                 closeMembership(active, observedAt);
-                guilds.saveAndFlushMembership(active);
+                memberships.saveAndFlushMembership(active);
 
                 GuildMembership membership = openMembership(guild, character, member, observedAt);
-                guilds.saveMembership(membership);
+                memberships.saveMembership(membership);
                 saveEvent(character, member.name(), GuildMembershipEventType.TRANSFERRED, previousGuild, guild, observedAt,
                         "Observed character transfer from " + safeGuildName(previousGuild) + " to " + guild.getName());
                 transfers++;
@@ -135,7 +155,7 @@ public class GuildDetailScrapeService {
             if (seenCharacterIds.contains(membership.getCharacter().getId())) continue;
 
             closeMembership(membership, observedAt);
-            guilds.saveMembership(membership);
+            memberships.saveMembership(membership);
             saveEvent(membership.getCharacter(), membership.getCharacterNameSnapshot(), GuildMembershipEventType.LEFT, guild, null, observedAt,
                     "Observed character leaving guild " + guild.getName());
             closed++;
@@ -156,7 +176,7 @@ public class GuildDetailScrapeService {
         snapshot.setMemberCount(detail.memberCount());
         snapshot.setOnlineCount(detail.onlineCount());
         snapshot.setRawHash(detail.rawHash());
-        guilds.saveSnapshot(snapshot);
+        snapshots.saveSnapshot(snapshot);
     }
 
     private GuildMembership openMembership(Guild guild, CharacterEntity character, GuildScrapePort.Member member, Instant observedAt) {
@@ -212,7 +232,7 @@ public class GuildDetailScrapeService {
         event.setToGuild(toGuild);
         event.setObservedAt(observedAt);
         event.setDescription(description);
-        guilds.saveEvent(event);
+        membershipEvents.saveEvent(event);
     }
 
     private void updateInvites(Guild guild, GuildScrapePort.GuildDetail detail, Instant observedAt) {
@@ -221,7 +241,7 @@ public class GuildDetailScrapeService {
             if (isBlank(invite.characterName())) continue;
             String normalized = invite.characterName().trim().toLowerCase(Locale.ROOT);
             seen.add(normalized);
-            GuildInvite entity = guilds.findActiveInvite(guild.getId(), invite.characterName()).orElseGet(GuildInvite::new);
+            GuildInvite entity = invites.findActiveInvite(guild.getId(), invite.characterName()).orElseGet(GuildInvite::new);
             if (entity.getId() == null) {
                 entity.setGuild(guild);
                 entity.setCharacterName(normalizeDisplayName(invite.characterName()));
@@ -230,14 +250,14 @@ public class GuildDetailScrapeService {
             }
             entity.setLastSeenAt(observedAt);
             entity.setActive(true);
-            guilds.saveInvite(entity);
+            invites.saveInvite(entity);
         }
 
-        for (GuildInvite active : guilds.findActiveInvites(guild.getId())) {
+        for (GuildInvite active : invites.findActiveInvites(guild.getId())) {
             if (!seen.contains(active.getCharacterName().trim().toLowerCase(Locale.ROOT))) {
                 active.setActive(false);
                 active.setLastSeenAt(observedAt);
-                guilds.saveInvite(active);
+                invites.saveInvite(active);
             }
         }
     }

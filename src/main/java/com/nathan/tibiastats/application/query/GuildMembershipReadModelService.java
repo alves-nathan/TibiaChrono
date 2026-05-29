@@ -3,7 +3,7 @@ package com.nathan.tibiastats.application.query;
 import com.nathan.tibiastats.domain.model.CharacterEntity;
 import com.nathan.tibiastats.domain.model.GuildMembership;
 import com.nathan.tibiastats.domain.port.CharacterRepositoryPort;
-import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
+import com.nathan.tibiastats.domain.port.GuildMembershipRepositoryPort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -11,10 +11,10 @@ import java.util.List;
 
 @ReadModelComponent
 public class GuildMembershipReadModelService {
-    private final SpringGuildRepository guilds;
+    private final GuildMembershipRepositoryPort guilds;
     private final CharacterRepositoryPort characters;
 
-    public GuildMembershipReadModelService(SpringGuildRepository guilds, CharacterRepositoryPort characters) {
+    public GuildMembershipReadModelService(GuildMembershipRepositoryPort guilds, CharacterRepositoryPort characters) {
         this.guilds = guilds;
         this.characters = characters;
     }

@@ -2,9 +2,9 @@ package com.nathan.tibiastats.application.service;
 
 import com.nathan.tibiastats.domain.model.Guild;
 import com.nathan.tibiastats.domain.model.World;
+import com.nathan.tibiastats.domain.port.GuildCatalogRepositoryPort;
 import com.nathan.tibiastats.domain.port.GuildScrapePort;
 import com.nathan.tibiastats.domain.port.WorldRepositoryPort;
-import com.nathan.tibiastats.infrastructure.persistence.SpringGuildRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,19 +22,19 @@ public class GuildCatalogService {
     private static final String LOG_PREFIX = "[GUILD_SCRAPER]";
 
     private final GuildScrapePort scraper;
-    private final SpringGuildRepository guilds;
+    private final GuildCatalogRepositoryPort guilds;
     private final WorldRepositoryPort worlds;
     private final Clock clock;
 
     @Autowired
     public GuildCatalogService(GuildScrapePort scraper,
-                               SpringGuildRepository guilds,
+                               GuildCatalogRepositoryPort guilds,
                                WorldRepositoryPort worlds) {
         this(scraper, guilds, worlds, Clock.systemUTC());
     }
 
     GuildCatalogService(GuildScrapePort scraper,
-                        SpringGuildRepository guilds,
+                        GuildCatalogRepositoryPort guilds,
                         WorldRepositoryPort worlds,
                         Clock clock) {
         this.scraper = scraper;
@@ -73,7 +73,7 @@ public class GuildCatalogService {
                             LocalDate foundedAt,
                             boolean active,
                             Instant observedAt) {
-        String normalizedName = SpringGuildRepository.normalizeGuildName(name);
+        String normalizedName = normalizeGuildName(name);
         Guild guild = guilds.findGuild(name).orElseGet(Guild::new);
         boolean created = guild.getId() == null;
 
@@ -122,6 +122,11 @@ public class GuildCatalogService {
 
     private static String normalizeDisplayName(String value) {
         return value == null ? "" : value.replace('\u00a0', ' ').replaceAll("\\s+", " ").trim();
+    }
+
+    private static String normalizeGuildName(String name) {
+        if (name == null) return "";
+        return name.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     record GuildUpdate(Guild guild, boolean created) {}
