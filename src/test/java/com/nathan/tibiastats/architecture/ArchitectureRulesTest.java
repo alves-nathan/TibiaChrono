@@ -336,4 +336,12 @@ class ArchitectureRulesTest {
                     "java.sql.."
             );
 
+
+    @ArchTest
+    static final ArchRule highscore_scrape_properties_should_delegate_plan_setting_details = noClasses()
+            .that().haveSimpleName("HighscoreScrapeProperties")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.nathan.tibiastats.domain.model.StatCategory"
+            );
+
 }
