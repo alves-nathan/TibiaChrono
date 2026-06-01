@@ -51,3 +51,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0029: CharacterDetailsService as a character details facade](adr/ADR-0029-character-details-service-as-facade.md)
 - [ADR-0030: CharacterOnlineReadModelService as a read-model facade](adr/ADR-0030-character-online-read-model-facade.md)
 - [ADR-0031: Extract shared highscore plan settings](adr/ADR-0031-highscore-plan-settings-extraction.md)
+- [ADR-0032: Split GuildDetailPageParser into focused detail parser collaborators](adr/ADR-0032-guild-detail-page-parser-components.md)

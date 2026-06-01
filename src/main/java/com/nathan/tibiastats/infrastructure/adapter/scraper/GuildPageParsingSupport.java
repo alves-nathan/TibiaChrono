@@ -9,12 +9,18 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 final class GuildPageParsingSupport {
     private static final Pattern CHARACTER_NAME_FROM_URL = Pattern.compile("[?&]name=([^&]+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern GUILD_NAME_FROM_URL = Pattern.compile("[?&]GuildName=([^&]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LEVEL_PATTERN = Pattern.compile("^\\d{1,5}$");
+    private static final List<String> VOCATION_WORDS = List.of(
+            "No Vocation", "Elder Druid", "Master Sorcerer", "Elite Knight", "Royal Paladin", "Exalted Monk",
+            "None", "Druid", "Sorcerer", "Knight", "Paladin", "Monk"
+    );
 
     private GuildPageParsingSupport() {
     }
@@ -34,6 +40,13 @@ final class GuildPageParsingSupport {
         return link.text();
     }
 
+    static Element firstCharacterLink(Element row) {
+        return row.select("a[href*=subtopic=characters], a[href*=characters]").stream()
+                .filter(link -> normalize(extractCharacterName(link)).length() > 1)
+                .findFirst()
+                .orElse(null);
+    }
+
     static LocalDate parseDate(String text) {
         if (text == null || text.isBlank()) return null;
         List<DateTimeFormatter> formatters = List.of(
@@ -49,6 +62,45 @@ final class GuildPageParsingSupport {
             }
         }
         return null;
+    }
+
+    static Optional<LocalDate> findJoiningDate(List<String> cells) {
+        for (String cell : cells) {
+            LocalDate date = parseDate(cell);
+            if (date != null) return Optional.of(date);
+        }
+        return Optional.empty();
+    }
+
+    static Optional<String> findVocation(List<String> cells) {
+        for (String cell : cells) {
+            for (String vocation : VOCATION_WORDS) {
+                if (cell.equalsIgnoreCase(vocation)) return Optional.of(vocation);
+            }
+        }
+        return Optional.empty();
+    }
+
+    static Optional<Integer> findLevel(List<String> cells) {
+        for (String cell : cells) {
+            String normalized = normalize(cell);
+            if (parseDate(normalized) != null) continue;
+            if (isLevel(normalized)) return Optional.of(Integer.parseInt(normalized));
+        }
+        return Optional.empty();
+    }
+
+    static boolean isLevel(String value) {
+        return LEVEL_PATTERN.matcher(normalize(value)).matches();
+    }
+
+    static List<String> vocationWords() {
+        return VOCATION_WORDS;
+    }
+
+    static boolean isOnlineStatus(String value) {
+        String lower = normalize(value).toLowerCase(Locale.ROOT);
+        return lower.equals("online") || lower.equals("offline");
     }
 
     static String firstNonBlank(String... values) {
