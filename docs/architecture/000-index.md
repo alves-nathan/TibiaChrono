@@ -49,3 +49,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0027: Enforce a global persistence boundary for core application layers](adr/ADR-0027-global-persistence-boundary.md)
 - [ADR-0028: HighscoreService as a highscore run facade](adr/ADR-0028-highscore-service-as-run-facade.md)
 - [ADR-0029: CharacterDetailsService as a character details facade](adr/ADR-0029-character-details-service-as-facade.md)
+- [ADR-0030: CharacterOnlineReadModelService as a read-model facade](adr/ADR-0030-character-online-read-model-facade.md)
