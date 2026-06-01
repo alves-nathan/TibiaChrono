@@ -25,6 +25,26 @@ class ArchitectureRulesTest {
                 }
             };
 
+
+    private static final DescribedPredicate<JavaClass> HIGHSCORE_RUN_INTERNALS =
+            new DescribedPredicate<>("highscore run internals") {
+                private final java.util.Set<String> helperNames = java.util.Set.of(
+                        "HighscorePageFetcher",
+                        "HighscoreScopePlanner",
+                        "HighscoreCharacterResolver",
+                        "HighscoreScopeStateService",
+                        "HighscoreFetchRetryPolicy",
+                        "HighscoreStatStorageService",
+                        "HighscoreScopeWorker",
+                        "HighscoreScopeScraper"
+                );
+
+                @Override
+                public boolean test(JavaClass javaClass) {
+                    return helperNames.contains(javaClass.getSimpleName());
+                }
+            };
+
     @ArchTest
     static final ArchRule domain_should_not_depend_on_application_infrastructure_or_config = noClasses()
             .that().resideInAPackage("..domain..")
@@ -103,6 +123,12 @@ class ArchitectureRulesTest {
             .that().haveSimpleName("HighscoreService")
             .should().dependOnClassesThat().resideInAnyPackage("..domain.port..");
 
+
+
+    @ArchTest
+    static final ArchRule highscore_service_should_remain_a_facade_without_direct_run_internals = noClasses()
+            .that().haveSimpleName("HighscoreService")
+            .should().dependOnClassesThat(HIGHSCORE_RUN_INTERNALS);
 
     @ArchTest
     static final ArchRule highscore_api_query_service_should_remain_a_facade_without_direct_jdbc = noClasses()
