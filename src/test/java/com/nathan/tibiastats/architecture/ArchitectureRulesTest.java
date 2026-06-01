@@ -55,6 +55,16 @@ class ArchitectureRulesTest {
                 }
             };
 
+
+    private static final DescribedPredicate<JavaClass> CHARACTER_DETAILS_PROFILE_DOM_TYPES =
+            new DescribedPredicate<>("character details profile DOM types") {
+                @Override
+                public boolean test(JavaClass javaClass) {
+                    return javaClass.getName().equals("org.jsoup.nodes.Element")
+                            || javaClass.getPackageName().startsWith("org.jsoup.select");
+                }
+            };
+
     @ArchTest
     static final ArchRule domain_should_not_depend_on_application_infrastructure_or_config = noClasses()
             .that().resideInAPackage("..domain..")
@@ -216,6 +226,12 @@ class ArchitectureRulesTest {
     static final ArchRule guild_detail_page_parser_should_remain_a_facade_without_row_dom_details = noClasses()
             .that().haveSimpleName("GuildDetailPageParser")
             .should().dependOnClassesThat(GUILD_DETAIL_ROW_DOM_TYPES);
+
+
+    @ArchTest
+    static final ArchRule character_details_page_parser_should_remain_a_facade_without_profile_dom_details = noClasses()
+            .that().haveSimpleName("CharacterDetailsPageParser")
+            .should().dependOnClassesThat(CHARACTER_DETAILS_PROFILE_DOM_TYPES);
 
     @ArchTest
     static final ArchRule jsoup_world_adapter_should_remain_transport_only_without_dom_parsing_details = noClasses()
