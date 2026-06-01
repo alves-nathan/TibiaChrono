@@ -54,3 +54,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0032: Split GuildDetailPageParser into focused detail parser collaborators](adr/ADR-0032-guild-detail-page-parser-components.md)
 - [ADR-0033: Split CharacterDetailsPageParser into focused profile parser collaborators](adr/ADR-0033-character-details-page-parser-components.md)
 - [ADR-0034: Split HighscoreStatRecordWriter into focused persistence collaborators](adr/ADR-0034-highscore-stat-record-writer-components.md)
+- [ADR-0035: Final architecture boundary hardening before feature work](adr/ADR-0035-final-boundary-hardening.md)

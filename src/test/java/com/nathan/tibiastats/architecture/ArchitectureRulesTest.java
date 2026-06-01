@@ -385,4 +385,38 @@ class ArchitectureRulesTest {
                     "java.sql.."
             );
 
+
+    @ArchTest
+    static final ArchRule application_and_configuration_layers_should_not_depend_on_scraper_implementation_details = noClasses()
+            .that().resideInAnyPackage(
+                    "..application..",
+                    "..config.."
+            )
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..infrastructure.adapter.scraper..",
+                    "org.jsoup.."
+            );
+
+
+    @ArchTest
+    static final ArchRule web_adapters_should_not_depend_on_scraper_or_jdbc_implementation_details = noClasses()
+            .that().resideInAnyPackage(
+                    "..infrastructure.adapter.web.."
+            )
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..infrastructure.adapter.scraper..",
+                    "org.jsoup..",
+                    "org.springframework.jdbc..",
+                    "java.sql.."
+            );
+
+
+    @ArchTest
+    static final ArchRule scraper_adapters_should_not_depend_on_application_or_persistence_layers = noClasses()
+            .that().resideInAPackage("..infrastructure.adapter.scraper..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..application..",
+                    "..infrastructure.persistence.."
+            );
+
 }
