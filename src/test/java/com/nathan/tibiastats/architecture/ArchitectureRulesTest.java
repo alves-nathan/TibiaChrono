@@ -279,4 +279,16 @@ class ArchitectureRulesTest {
                     "..application.query.."
             );
 
+
+    @ArchTest
+    static final ArchRule core_application_layers_should_not_depend_directly_on_persistence_adapters = noClasses()
+            .that().resideInAnyPackage(
+                    "..application..",
+                    "..config..",
+                    "..infrastructure.adapter.web.rest.."
+            )
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..infrastructure.persistence.."
+            );
+
 }
