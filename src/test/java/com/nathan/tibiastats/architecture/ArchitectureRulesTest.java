@@ -297,6 +297,16 @@ class ArchitectureRulesTest {
 
 
     @ArchTest
+    static final ArchRule character_details_service_should_remain_a_facade_without_direct_selection_fetch_or_persistence_dependencies = noClasses()
+            .that().haveSimpleName("CharacterDetailsService")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..domain.port..",
+                    "..config..",
+                    "org.springframework.transaction.."
+            );
+
+
+    @ArchTest
     static final ArchRule admin_scraper_service_should_remain_a_facade_without_direct_config_persistence_or_query_access = noClasses()
             .that().haveSimpleName("AdminScraperService")
             .should().dependOnClassesThat().resideInAnyPackage(

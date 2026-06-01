@@ -48,3 +48,4 @@ This folder records architecture decisions, legacy boundaries and quality rules 
 - [ADR-0026: Access scrape job execution persistence through a domain repository port](adr/ADR-0026-scrape-job-execution-through-domain-port.md)
 - [ADR-0027: Enforce a global persistence boundary for core application layers](adr/ADR-0027-global-persistence-boundary.md)
 - [ADR-0028: HighscoreService as a highscore run facade](adr/ADR-0028-highscore-service-as-run-facade.md)
+- [ADR-0029: CharacterDetailsService as a character details facade](adr/ADR-0029-character-details-service-as-facade.md)
