@@ -376,4 +376,13 @@ class ArchitectureRulesTest {
                     "com.nathan.tibiastats.domain.model.StatCategory"
             );
 
+
+    @ArchTest
+    static final ArchRule highscore_stat_record_writer_should_remain_a_facade_without_direct_jdbc_or_sql_details = noClasses()
+            .that().haveSimpleName("HighscoreStatRecordWriter")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "org.springframework.jdbc..",
+                    "java.sql.."
+            );
+
 }
