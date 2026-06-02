@@ -51,3 +51,15 @@ After each test hardening batch:
 4. raise the minimum coverage only to a value safely below the measured coverage.
 
 Do not raise the gate in the same patch that adds broad new tests unless the measured result is known.
+
+## Measured milestone after coverage batch 37
+
+After the service persistence/status coverage batch and its repair, the local Docker test runner measured:
+
+- 162 automated tests;
+- approximately 74% instruction coverage;
+- approximately 50% branch coverage;
+- approximately 73% line coverage;
+- `application.service` at approximately 77% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 70%, which is intentionally below the measured line coverage to avoid fragile failures while still preventing large regressions.
