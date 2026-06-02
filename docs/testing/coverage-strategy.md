@@ -90,3 +90,17 @@ After parser and highscore persistence tail coverage tests, the local Docker tes
 - `infrastructure.persistence` at approximately 79% instruction coverage.
 
 The JaCoCo bundle line coverage gate was raised to 78%, still slightly below the measured line coverage and backed by focused tests for parser branches and highscore persistence collaborators.
+
+## Measured milestone after coverage batch 40
+
+After query facade, guild read model and command record coverage tests, the local Docker test runner measured:
+
+- 197 automated tests;
+- approximately 80% instruction coverage;
+- approximately 57% branch coverage;
+- approximately 80% line coverage;
+- `application.command` at 100% instruction coverage;
+- `application.query` at approximately 80% instruction coverage;
+- `domain.model` at approximately 84% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 80%, aligned with the measured batch 40 line coverage and reinforced by the additional highscore/domain tail tests in batch 41.
