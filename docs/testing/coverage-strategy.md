@@ -135,3 +135,18 @@ After manual-run, read-model JDBC, highscore resolver and online-character cover
 
 The JaCoCo bundle line coverage gate was raised to 86%, safely below the measured line coverage while still preventing meaningful regressions after the Batch 42 coverage jump.
 
+## Measured milestone after coverage batch 43
+
+After highscore throttle and SpringCharacterRepository coverage tests, the local Docker test runner measured:
+
+- 234 automated tests;
+- approximately 88% instruction coverage;
+- approximately 64% branch coverage;
+- approximately 88% line coverage;
+- `application.service` at approximately 90% instruction coverage;
+- `application.query` at approximately 89% instruction coverage;
+- `infrastructure.persistence` at approximately 89% instruction coverage;
+- `domain.model` at approximately 97% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 87%, safely below the measured line coverage while still tightening the regression guard after the Batch 43 persistence/service coverage gains.
+
