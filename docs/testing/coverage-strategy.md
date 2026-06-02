@@ -63,3 +63,17 @@ After the service persistence/status coverage batch and its repair, the local Do
 - `application.service` at approximately 77% instruction coverage.
 
 The JaCoCo bundle line coverage gate was raised to 70%, which is intentionally below the measured line coverage to avoid fragile failures while still preventing large regressions.
+
+## Measured milestone after coverage batch 38
+
+After scheduler, REST controller and mediator coverage tests, the local Docker test runner measured:
+
+- 180 automated tests;
+- approximately 77% instruction coverage;
+- approximately 51% branch coverage;
+- approximately 76% line coverage;
+- `application.scheduler` at approximately 85% instruction coverage;
+- `application.mediator` at 100% instruction coverage;
+- `infrastructure.adapter.web.rest` at approximately 75% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 75%, still below the measured line coverage and backed by focused tests for schedulers, REST adapters and mediator behavior.
