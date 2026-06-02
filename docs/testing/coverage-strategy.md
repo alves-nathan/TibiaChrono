@@ -118,3 +118,20 @@ After highscore page fetcher/scope scraper and domain entity tail coverage tests
 - `domain.model` at approximately 97% instruction coverage.
 
 The JaCoCo bundle line coverage gate was raised to 83%, matching the measured batch 41 line coverage while leaving a small margin below the expected coverage after the additional manual-run, read-model and online-character tests in batch 42.
+
+## Measured milestone after coverage batch 42
+
+After manual-run, read-model JDBC, highscore resolver and online-character coverage tests, plus the nullable JDBC read-model hotfixes, the local Docker test runner measured:
+
+- 226 automated tests;
+- approximately 87% instruction coverage;
+- approximately 62% branch coverage;
+- approximately 87% line coverage;
+- `application.service` at approximately 88% instruction coverage;
+- `application.query` at approximately 89% instruction coverage;
+- `domain.model` at approximately 97% instruction coverage;
+- `infrastructure.adapter.scraper` at approximately 80% instruction coverage;
+- `infrastructure.persistence` at approximately 79% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 86%, safely below the measured line coverage while still preventing meaningful regressions after the Batch 42 coverage jump.
+
