@@ -100,11 +100,11 @@ test-coverage:
 	@report="$(PWD)/.test-maven/workspace/target/site/jacoco/index.html"; \
 	echo "JaCoCo coverage report: $$report"; \
 	if command -v wslview >/dev/null 2>&1; then \
-	  wslview "$$report"; \
+	  wslview "$$report" >/dev/null 2>&1 || true; \
 	elif command -v xdg-open >/dev/null 2>&1; then \
 	  xdg-open "$$report" >/dev/null 2>&1 || true; \
 	elif command -v explorer.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then \
-	  explorer.exe "$$(wslpath -w "$$report")"; \
+	  explorer.exe "$$(wslpath -w "$$report")" >/dev/null 2>&1 || true; \
 	else \
 	  echo "Open the file above in your browser."; \
 	fi
