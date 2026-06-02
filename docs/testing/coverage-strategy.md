@@ -77,3 +77,16 @@ After scheduler, REST controller and mediator coverage tests, the local Docker t
 - `infrastructure.adapter.web.rest` at approximately 75% instruction coverage.
 
 The JaCoCo bundle line coverage gate was raised to 75%, still below the measured line coverage and backed by focused tests for schedulers, REST adapters and mediator behavior.
+
+## Measured milestone after coverage batch 39
+
+After parser and highscore persistence tail coverage tests, the local Docker test runner measured:
+
+- 190 automated tests;
+- approximately 79% instruction coverage;
+- approximately 56% branch coverage;
+- approximately 78% line coverage;
+- `infrastructure.adapter.scraper` at approximately 80% instruction coverage;
+- `infrastructure.persistence` at approximately 79% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 78%, still slightly below the measured line coverage and backed by focused tests for parser branches and highscore persistence collaborators.
