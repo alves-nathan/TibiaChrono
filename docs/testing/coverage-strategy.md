@@ -104,3 +104,17 @@ After query facade, guild read model and command record coverage tests, the loca
 - `domain.model` at approximately 84% instruction coverage.
 
 The JaCoCo bundle line coverage gate was raised to 80%, aligned with the measured batch 40 line coverage and reinforced by the additional highscore/domain tail tests in batch 41.
+
+
+## Measured milestone after coverage batch 41
+
+After highscore page fetcher/scope scraper and domain entity tail coverage tests, the local Docker test runner measured:
+
+- 209 automated tests;
+- approximately 83% instruction coverage;
+- approximately 59% branch coverage;
+- approximately 83% line coverage;
+- `application.service` at approximately 83% instruction coverage;
+- `domain.model` at approximately 97% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 83%, matching the measured batch 41 line coverage while leaving a small margin below the expected coverage after the additional manual-run, read-model and online-character tests in batch 42.

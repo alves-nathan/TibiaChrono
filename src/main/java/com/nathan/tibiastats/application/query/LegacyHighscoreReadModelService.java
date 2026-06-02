@@ -123,15 +123,15 @@ public class LegacyHighscoreReadModelService extends JdbcReadModelSupport {
     }
 
     private ApiQueryService.HighscoreView mapHighscore(ResultSet rs, int rowNum) throws SQLException {
-        Long value = rs.getLong("value");
+        Long value = nullableLong(rs, "value");
         if (rs.wasNull()) {
             value = null;
         }
         return new ApiQueryService.HighscoreView(
-                rs.getLong("id"),
+                nullableLong(rs, "id"),
                 getNullableInteger(rs, "rank"),
                 rs.getString("character_name"),
-                rs.getLong("character_id"),
+                nullableLong(rs, "character_id"),
                 rs.getString("world"),
                 rs.getString("category"),
                 getNullableInteger(rs, "vocation_filter_id"),
@@ -140,4 +140,10 @@ public class LegacyHighscoreReadModelService extends JdbcReadModelSupport {
                 toInstant(rs.getTimestamp("scraped_at"))
         );
     }
+
+    private static Long nullableLong(ResultSet rs, String columnLabel) throws SQLException {
+        long value = rs.getLong(columnLabel);
+        return rs.wasNull() ? null : value;
+    }
+
 }
