@@ -166,3 +166,18 @@ After service facade coverage tests, the local Docker test runner measured:
 
 The JaCoCo bundle line coverage gate was raised to 88%, matching the measured line coverage floor while preserving a narrow but acceptable safety margin for the Batch 45 scraper-support and target-planner coverage gains.
 
+## Measured milestone after coverage batch 45
+
+After scraper support and guild planner coverage tests, the local Docker test runner measured:
+
+- 249 automated tests;
+- approximately 89% instruction coverage;
+- approximately 66% branch coverage;
+- approximately 89% line coverage;
+- `application.service` at approximately 92% instruction coverage;
+- `infrastructure.adapter.scraper` at approximately 83% instruction coverage;
+- `application.query` at approximately 89% instruction coverage;
+- `infrastructure.persistence` at approximately 89% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 89%, matching the measured line coverage floor while the Batch 46 controller/naming tests add additional safety margin around REST and naming delegation paths.
+
