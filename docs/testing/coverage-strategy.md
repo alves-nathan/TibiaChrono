@@ -304,3 +304,16 @@ Batch 54 adds tail coverage around `GuildDetailScrapeService`, focusing on the r
 
 The JaCoCo bundle line coverage gate was raised to `0.96` after adding this additional coverage.
 
+## Measured milestone after coverage batch 55
+
+Batch 55 adds smaller tail-coverage tests across the remaining high-value low-risk areas:
+
+- scraper parsing support helpers;
+- guild detail summary fallback parsing;
+- character details value parsing edge cases;
+- highscore scheduler skip/startup branches;
+- world online analytics validation helpers;
+- analytics history mapping.
+
+The JaCoCo bundle line coverage gate was raised to `0.97` after adding this additional coverage.
+
