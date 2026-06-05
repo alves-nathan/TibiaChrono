@@ -261,3 +261,23 @@ After guild repository, config and highscore category tail coverage tests, the l
 
 The JaCoCo bundle line coverage gate was raised to 94%, while the Batch 51 tests add margin around highscore run coordination, HTTP backoff coordination, persisted highscore scrape state and the legacy highscore read model.
 
+## Measured milestone after coverage batch 51
+
+After highscore run/backoff, legacy read model and scrape state repository tail coverage tests, the local Docker test runner measured:
+
+- 317 automated tests;
+- approximately 94% instruction coverage;
+- approximately 73% branch coverage;
+- approximately 94% line coverage;
+- `application.service` at approximately 94% instruction coverage;
+- `application.query` at approximately 95% instruction coverage;
+- `infrastructure.persistence` at approximately 97% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 95%, while the Batch 52 tests add margin around highscore request throttling and highscore HTTP client URL/category mapping.
+
+## Batch 52 gate stabilization
+
+Batch 52 added highscore throttle and HTTP client tail coverage tests, but the measured bundle line coverage remained at approximately `0.94`.
+
+Because the JaCoCo check failed with the gate at `0.95`, the gate was restored to `0.94` to keep the build green. The next coverage batch should add additional tests before attempting to raise the bundle line coverage gate to `0.95` again.
+
