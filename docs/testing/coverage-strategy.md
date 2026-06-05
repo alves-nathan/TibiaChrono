@@ -245,3 +245,19 @@ After REST controller and highscore scheduler tail coverage tests, the local Doc
 
 The JaCoCo bundle line coverage gate was raised to 93%, while the Batch 50 tests add margin around highscore category mapping, Spring guild repository delegation, legacy scrape properties and safe HTTP-client encoding helpers.
 
+## Measured milestone after coverage batch 50
+
+After guild repository, config and highscore category tail coverage tests, the local Docker test runner measured:
+
+- 303 automated tests;
+- approximately 93% instruction coverage;
+- approximately 71% branch coverage;
+- approximately 93% line coverage;
+- `application.query` at approximately 94% instruction coverage;
+- `infrastructure.persistence` at approximately 95% instruction coverage;
+- `config` at approximately 96% instruction coverage;
+- `infrastructure.adapter.web.rest` at approximately 95% instruction coverage;
+- `application.scheduler` at approximately 92% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 94%, while the Batch 51 tests add margin around highscore run coordination, HTTP backoff coordination, persisted highscore scrape state and the legacy highscore read model.
+
