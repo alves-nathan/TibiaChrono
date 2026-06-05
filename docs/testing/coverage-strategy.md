@@ -281,3 +281,14 @@ Batch 52 added highscore throttle and HTTP client tail coverage tests, but the m
 
 Because the JaCoCo check failed with the gate at `0.95`, the gate was restored to `0.94` to keep the build green. The next coverage batch should add additional tests before attempting to raise the bundle line coverage gate to `0.95` again.
 
+## Measured milestone after coverage batch 53
+
+Batch 53 adds network-free fetch-path coverage for the Tibia HTTP clients:
+
+- world overview, world page and character lookup fetches;
+- guild list and guild detail fetches;
+- character detail fetches;
+- highscore page fetch success and non-success status handling.
+
+The JaCoCo bundle line coverage gate was raised to `0.95` after adding this additional coverage.
+
