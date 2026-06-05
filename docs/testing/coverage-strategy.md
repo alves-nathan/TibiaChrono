@@ -196,3 +196,19 @@ After web REST, auth and character naming coverage tests, the local Docker test 
 
 The JaCoCo bundle line coverage gate was raised to 90%, matching the measured line coverage floor while the Batch 47 adapter/persistence tests add additional safety margin around wrapper and persistence delegation paths.
 
+## Measured milestone after coverage batch 47
+
+After scraper adapter and highscore persistence coverage tests, the local Docker test runner measured:
+
+- 274 automated tests;
+- approximately 91% instruction coverage;
+- approximately 67% branch coverage;
+- approximately 91% line coverage;
+- `application.service` at approximately 92% instruction coverage;
+- `application.query` at approximately 89% instruction coverage;
+- `infrastructure.adapter.scraper` at approximately 88% instruction coverage;
+- `infrastructure.persistence` at approximately 91% instruction coverage;
+- `infrastructure.adapter.web.rest` at approximately 84% instruction coverage.
+
+The JaCoCo bundle line coverage gate was raised to 91%, matching the measured line coverage floor while the Batch 48 query/read model tests add additional margin around highscore API mapping, category normalization and character identity read model paths.
+

@@ -105,10 +105,10 @@ public class HighscoreRecordReadModelService extends HighscoreApiJdbcSupport {
                 .addValue("limit", safeLimit(limit));
 
         if (from != null) {
-            sql.append(" and coalesce(p.valid_until, date '9999-12-31') >= :fromDate");
+            sql.append(" and coalesce(p.valid_until, date '9999-12-31') >= :fromDate\n");
         }
         if (to != null) {
-            sql.append(" and p.valid_from <= :toDate");
+            sql.append(" and p.valid_from <= :toDate\n");
         }
         if (characterName != null && !characterName.isBlank()) {
             sql.append("""
