@@ -292,3 +292,15 @@ Batch 53 adds network-free fetch-path coverage for the Tibia HTTP clients:
 
 The JaCoCo bundle line coverage gate was raised to `0.95` after adding this additional coverage.
 
+## Measured milestone after coverage batch 54
+
+Batch 54 adds tail coverage around `GuildDetailScrapeService`, focusing on the remaining high-value paths after the HTTP client coverage batch:
+
+- blank guild detail rejection;
+- active membership refresh paths;
+- membership close and transfer events;
+- invite creation, refresh and close paths;
+- display-name normalization and null-safe list handling.
+
+The JaCoCo bundle line coverage gate was raised to `0.96` after adding this additional coverage.
+
