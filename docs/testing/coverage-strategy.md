@@ -340,3 +340,15 @@ Batch 57 adds targeted coverage after Batch 56 stabilized the gate at `0.97`.
 
 The tests focus on low-risk uncovered tails in highscore flow helpers, scope planning, query support helpers, compact highscore persistence, the application entrypoint and utility serialization. After this batch, the JaCoCo bundle line coverage gate is raised to `0.98`.
 
+## Measured milestone after coverage batch 58
+
+Batch 58 targets the `0.99` JaCoCo bundle line coverage gate after Batch 57 stabilized `0.98`.
+
+It adds broader but still isolated coverage around REST/GraphQL controller tails, JWT and blacklist filter branches, character online/timeline query helpers, Spring world persistence delegates, highscore throttle/checked-failure branches and remaining guild parser edge cases.
+
+## Coverage batch 58 gate hotfix
+
+Batch 58 test coverage additions are kept, but the JaCoCo bundle line coverage gate is restored from `0.99` to `0.98`.
+
+Reason: after Batch 58 and its hotfixes, all tests passed, but JaCoCo reported the bundle line covered ratio as `0.98`, below the attempted `0.99` minimum. The 99% target will require another focused coverage batch based on the updated report.
+
