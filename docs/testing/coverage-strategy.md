@@ -317,3 +317,20 @@ Batch 55 adds smaller tail-coverage tests across the remaining high-value low-ri
 
 The JaCoCo bundle line coverage gate was raised to `0.97` after adding this additional coverage.
 
+## Measured milestone after coverage batch 56
+
+Batch 56 adds remaining tail coverage across small, isolated areas:
+
+- scraper parser fallbacks and sanitization paths;
+- query view and JDBC mapper helpers;
+- domain model accessors and small factories;
+- service edge paths such as interrupted guild scrape delay and analytics total mapping.
+
+The JaCoCo bundle line coverage gate was raised to `0.98` after adding this additional coverage.
+
+## Coverage batch 56 gate hotfix
+
+Batch 56 test coverage additions are kept, but the JaCoCo bundle line coverage gate is restored from `0.98` to `0.97`.
+
+Reason: the full `verify` run after Batch 56 passed all tests, but JaCoCo reported the bundle line covered ratio as `0.97`, below the attempted `0.98` minimum. The 98% target will require another focused coverage batch based on the updated report.
+
