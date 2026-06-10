@@ -352,3 +352,21 @@ Batch 58 test coverage additions are kept, but the JaCoCo bundle line coverage g
 
 Reason: after Batch 58 and its hotfixes, all tests passed, but JaCoCo reported the bundle line covered ratio as `0.98`, below the attempted `0.99` minimum. The 99% target will require another focused coverage batch based on the updated report.
 
+## Measured milestone after coverage batch 59
+
+Batch 59 targets the `0.99` JaCoCo bundle line coverage gate after Batch 58 stabilized the suite at `0.98`.
+
+It adds focused coverage for the remaining service interruption/throttle paths, scraper parser fallbacks, defensive config/security branches and query timeline/JDBC helper paths.
+
+## Coverage batch 59 gate hotfix
+
+Batch 59 test coverage additions are kept, but the JaCoCo bundle line coverage gate is restored from `0.99` to `0.98`.
+
+Reason: after Batch 59 and its hotfixes, all tests passed with the expanded suite, but JaCoCo reported the bundle line covered ratio as `0.98`, below the attempted `0.99` minimum. The 99% target will require another focused coverage batch based on the updated report.
+
+## Measured milestone after coverage batch 60
+
+Batch 60 targets the `0.99` JaCoCo bundle line coverage gate after Batch 59 reduced the report to `52` missed lines.
+
+It adds focused coverage for the remaining `HighscoreRequestThrottle` budget-exhaustion path without waiting for the real `600000ms` request budget window.
+
