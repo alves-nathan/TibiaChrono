@@ -334,3 +334,9 @@ Batch 56 test coverage additions are kept, but the JaCoCo bundle line coverage g
 
 Reason: the full `verify` run after Batch 56 passed all tests, but JaCoCo reported the bundle line covered ratio as `0.97`, below the attempted `0.98` minimum. The 98% target will require another focused coverage batch based on the updated report.
 
+## Measured milestone after coverage batch 57
+
+Batch 57 adds targeted coverage after Batch 56 stabilized the gate at `0.97`.
+
+The tests focus on low-risk uncovered tails in highscore flow helpers, scope planning, query support helpers, compact highscore persistence, the application entrypoint and utility serialization. After this batch, the JaCoCo bundle line coverage gate is raised to `0.98`.
+
